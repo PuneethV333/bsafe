@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id          String               @id @default(uuid())
+  firebaseUid String               @unique @map("firebase_uid")
+  name        String
+  email       String?              @unique
+  phone       String?              @unique
+  createdAt   DateTime             @default(now()) @map("created_at")
+  updatedAt   DateTime             @updatedAt @map("updated_at")
+  contacts    EmergencyContact[]
+  alerts      Alert[]
+}
+
+model EmergencyContact {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  phone        String?
+  email        String?
+  relationship String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, phone])
+  @@unique([userId, email])
+  @@index([userId])
+}
+
+enum AlertStatus {
+  sent
+  acknowledged
+  resolved
+}
+
+model Alert {
+  id            String          @id @default(uuid())
+  userId        String          @map("user_id")
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status        AlertStatus     @default(sent)
+  trackingToken String          @unique @map("tracking_token") @default(uuid())
+  triggeredAt   DateTime        @default(now()) @map("triggered_at")
+  resolvedAt    DateTime?       @map("resolved_at")
+  lastLocation  AlertLocation?  @relation("LastLocation", fields: [lastLocationId], references: [id])
+  lastLocationId String?        @unique @map("last_location_id")
+  locations     AlertLocation[] @relation("AlertLocations")
+  activityLogs  ActivityLog[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model AlertLocation {
+  id         String   @id @default(uuid())
+  alertId    String   @map("alert_id")
+  alert      Alert    @relation("AlertLocations", fields: [alertId], references: [id], onDelete: Cascade)
+  latitude   Float
+  longitude  Float
+  accuracy   Float?
+  recordedAt DateTime @default(now()) @map("recorded_at")
+  lastLocationOf Alert? @relation("LastLocation")
+
+  @@index([alertId, recordedAt])
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  alertId   String   @map("alert_id")
+  alert     Alert    @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  eventType String   @map("event_type")
+  actor     String?
+  timestamp DateTime @default(now())
+
+  @@index([alertId])
+}

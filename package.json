@@ -1,0 +1,31 @@
+{
+  "name": "bsafe",
+  "version": "0.1.0",
+  "private": true,
+  "description": "bSafe — silent SOS emergency web app",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c magenta,cyan \"npm run dev -w @bsafe/api\" \"npm run dev -w @bsafe/web\"",
+    "build": "npm run build -w @bsafe/api && npm run build -w @bsafe/web",
+    "lint": "npm run lint -w @bsafe/api && npm run lint -w @bsafe/web",
+    "typecheck": "npm run typecheck -w @bsafe/api && npm run typecheck -w @bsafe/web",
+    "format": "prettier --write \"apps/**/*.{ts,tsx,js,json,css,html}\" \"packages/**/*.ts\""
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.4",
+    "prettier": "^3.9.6"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "allowScripts": {
+    "esbuild": true,
+    "prisma": true,
+    "@prisma/engines": true,
+    "@firebase/util": true,
+    "protobufjs": true
+  }
+}

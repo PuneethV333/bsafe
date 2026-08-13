@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: bsafe-postgres
+    environment:
+      POSTGRES_USER: bsafe
+      POSTGRES_PASSWORD: bsafe
+      POSTGRES_DB: bsafe
+    ports:
+      # Host port 5434: local/other-project Postgres instances may occupy 5432/5433.
+      - '5434:5432'
+    volumes:
+      # Postgres 18 image expects the mount at /var/lib/postgresql (data lives in a subdir).
+      - bsafe-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U bsafe -d bsafe']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Redis is expected to run on the host at localhost:6379 for this project.
+  # To use a containerized instance instead, uncomment the block below.
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: bsafe-redis
+  #   ports:
+  #     - "6379:6379"
+
+volumes:
+  bsafe-pgdata:
