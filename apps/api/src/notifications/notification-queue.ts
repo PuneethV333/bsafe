@@ -1,0 +1,35 @@
+import { FactoryProvider } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Queue } from 'bullmq';
+
+/** DI token for the BullMQ `notifications` queue (consumed from Phase 6). */
+export const NOTIFICATION_QUEUE = 'NOTIFICATION_QUEUE';
+
+export type NotificationChannel = 'sms' | 'email';
+
+export interface NotificationJob {
+  alertId: string;
+  contactId: string;
+  channel: NotificationChannel;
+  trackingUrl: string;
+  userName: string;
+  triggeredAt: string;
+}
+
+export const notificationQueueProvider: FactoryProvider<Queue<NotificationJob>> = {
+  provide: NOTIFICATION_QUEUE,
+  useFactory: (config: ConfigService) =>
+    new Queue<NotificationJob>('notifications', {
+      connection: {
+        host: config.get<string>('REDIS_HOST', 'localhost'),
+        port: config.get<number>('REDIS_PORT', 6379),
+      },
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: { age: 3600, count: 1000 },
+        removeOnFail: { age: 86_400, count: 1000 },
+      },
+    }),
+  inject: [ConfigService],
+};

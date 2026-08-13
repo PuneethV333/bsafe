@@ -2,6 +2,33 @@
 
 Tracks progress through the phases defined in AGENTS.md.
 
+## Phase 3 — Redis, Caching & Rate Limiting
+
+**Status:** SHIPPED & VERIFIED — commit pending.
+
+### What was built
+
+- **Redis-backed throttler** (`apps/api/src/redis/redis-throttler.storage.ts`): custom `ThrottlerStorage` implementing the `@nestjs/throttler` v6 interface over the shared `RedisService` (INCR + EX window + PX block flag). Used instead of `nestjs-throttler-storage-redis`, whose latest release peers only to `@nestjs/common <=10`.
+- **Global `ThrottlerModule`** (`forRootAsync`, Redis storage, default 60/60s) + global `ThrottlerGuard` as `APP_GUARD`; `getTracker` prefers `request.firebaseUser.uid` (per-user) then `request.ip` (per-IP).
+- **Global `FirebaseAuthGuard`** (was controller-level): now an `APP_GUARD` registered before the throttler so `firebaseUser` is set first, giving true per-user tracking. New `@Public()` decorator bypasses auth (health, root); public routes are throttled per-IP.
+- **Per-route `@Throttle` overrides** on every existing route (none on the bare default): `GET /api` 60/min, `GET /health` 60/min per IP, `POST /auth/sync` 10/min per IP (per-route `getTracker`), `GET /auth/me` 30/min per user.
+- **`CacheService`** (`apps/api/src/cache/`): JSON cache over Redis (`bsafe:cache:*`), `get/set/del/delByPrefix`, wired into `AuthService.findByFirebaseUid` (`profile:{uid}`, 60s TTL, invalidated on `syncUser` write paths).
+- **BullMQ notifications queue** (`apps/api/src/notifications/`): `notifications` Queue provider on Redis, exponential-backoff default job options (3 attempts, 5s), `OnModuleDestroy` close — provisioned now, enqueued/consumed from Phase 6.
+
+### What was tested
+
+- `npm run typecheck` / `lint` / `build` on `@bsafe/api` all clean.
+- Boot smoke (Redis + Firebase configured): `GET /api/health` 200; 60-hit burst then 429 with `Retry-After` header; Redis shows `throttler:*` counter + block keys.
+- `GET /api/auth/me` without token → 401 "Missing or malformed Authorization header" (global auth guard order intact).
+- CacheService probe via dist: set→read hit, `del`→miss, `delByPrefix('contacts:')` wipes all matching keys.
+
+### Known gaps / TODOs for next phase
+
+- Contacts cache + invalidation (`contacts:{uid}`, 30s TTL, invalidated on POST/PATCH/DELETE) lands in Phase 4 with the contacts CRUD routes.
+- `/auth/sync` is kept per-IP to match the route table even though it is authenticated (per-route `getTracker` override); `/auth/me` is per-user.
+- BullMQ worker (Twilio/SendGrid processors) and `notification_deliveries` table are Phase 6.
+- WebSocket gateway (Phase 5) needs its own manual throttling — not covered by `@nestjs/throttler`.
+
 ## Phase 2 — Authentication (Firebase)
 
 **Status:** SHIPPED & VERIFIED — commit in progress.

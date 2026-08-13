@@ -5,8 +5,11 @@ import {
 } from '@nestjs/common';
 import type { UserDto } from '@bsafe/shared-types';
 import type { DecodedIdToken } from 'firebase-admin/auth';
+import { CacheService } from '../cache/cache.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { FirebaseAdminService } from './firebase-admin.service';
+
+const PROFILE_CACHE_TTL_SECONDS = 60;
 
 function toUserDto(user: {
   id: string;
@@ -31,6 +34,7 @@ export class AuthService {
   constructor(
     private readonly firebase: FirebaseAdminService,
     private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
   ) {}
 
   /** Verify a Firebase ID token and return its claims. */
@@ -57,6 +61,7 @@ export class AuthService {
           where: { id: byEmail.id },
           data: { firebaseUid: uid },
         });
+        await this.cache.del(`profile:${uid}`);
         return toUserDto(linked);
       }
     }
@@ -70,6 +75,7 @@ export class AuthService {
           phone: claims.phone_number ?? null,
         },
       });
+      await this.cache.del(`profile:${uid}`);
       return toUserDto(user);
     } catch (e) {
       // Concurrent sign-in raced us to the create — fall back to the row.
@@ -81,12 +87,18 @@ export class AuthService {
     }
   }
 
-  /** Load the local user row for an authenticated Firebase user. */
+  /** Load the local user row for an authenticated Firebase user (cached 60s). */
   async findByFirebaseUid(uid: string): Promise<UserDto> {
+    const cacheKey = `profile:${uid}`;
+    const cached = await this.cache.get<UserDto>(cacheKey);
+    if (cached) return cached;
+
     const user = await this.prisma.user.findUnique({ where: { firebaseUid: uid } });
     if (!user) {
       throw new NotFoundException('No local user record for this Firebase account — call POST /auth/sync first.');
     }
-    return toUserDto(user);
+    const dto = toUserDto(user);
+    await this.cache.set(cacheKey, dto, PROFILE_CACHE_TTL_SECONDS);
+    return dto;
   }
 }
