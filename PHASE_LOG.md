@@ -2,9 +2,35 @@
 
 Tracks progress through the phases defined in AGENTS.md.
 
-## Phase 1 — Database Schema & ORM
+## Phase 2 — Authentication (Firebase)
 
 **Status:** SHIPPED & VERIFIED — commit in progress.
+
+### What was built
+
+- **API — Firebase Admin SDK** (`apps/api/src/auth/firebase-admin.service.ts`): modular firebase-admin v13 API; app only initialised when all three `FIREBASE_*` env vars are set, otherwise auth endpoints return 503 (dev without credentials still boots).
+- **API — `FirebaseAuthGuard`** (`apps/api/src/common/guards/firebase-auth.guard.ts`): verifies `Authorization: Bearer <Firebase ID token>`, attaches decoded claims to `request.firebaseUser`. 401 on missing/invalid token, 503 when unconfigured.
+- **API — `@CurrentUser()` decorator** (`apps/api/src/common/decorators/current-user.decorator.ts`): extracts claims or a single claim (e.g. `@CurrentUser('uid')`).
+- **API — `AuthModule`**: `POST /api/auth/sync` (verify token → create/link local `users` row via `firebase_uid`, P2002-safe upsert, links by email if an email-matching row exists) and `GET /api/auth/me` (current local user). Both return `UserDto` from `@bsafe/shared-types` (now a workspace dep of the API).
+- **Web — auth plumbing**: `lib/firebase.ts` (unchanged baseline) + new `lib/auth-context.ts` / `lib/auth.tsx` (AuthProvider) / `lib/useAuth.ts` (split so react-refresh stays clean), tracking `onAuthStateChanged`.
+- **Web — profile hook** (`lib/profile.ts`): react-query `useProfile()` → `POST /api/auth/sync` (idempotent upsert) returning `UserDto`.
+- **Web — UI**: `/login` page (email/password sign in & sign up, Firebase-unconfigured notice), `ProtectedRoute` wrapper, `HomePage` shell (profile + contact count + sign out); router split into public + protected routes.
+
+### What was tested
+
+- `npm run lint` / `typecheck` / `build` pass for `@bsafe/api`, `@bsafe/web`, `@bsafe/shared-types`.
+- API boots: `/api/health` OK (Redis PONG); `GET /api/auth/me` without a token → 401 "Missing or malformed Authorization header".
+- Web production build passes (Vite).
+
+### Known gaps / TODOs for next phase
+
+- Phone OTP auth not implemented (email/password only for now — PRD allows either).
+- Socket.IO handshake still unauthenticated (Phase 2 TODO in realtime baseline): must verify `client.handshake.auth.token`.
+- Full sign-up → login → `/me` → logout flow needs live Firebase credentials + email/password provider enabled to verify end to end.
+
+## Phase 1 — Database Schema & ORM
+
+**Status:** SHIPPED & COMMITTED (`phase(1)`).
 
 ### What was built
 

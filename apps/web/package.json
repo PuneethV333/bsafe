@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@bsafe/shared-types": "^0.1.0",
     "@tanstack/react-query": "^5.101.4",
     "axios": "^1.19.0",
     "firebase": "^12.17.1",
