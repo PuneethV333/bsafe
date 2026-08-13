@@ -2,6 +2,29 @@
 
 Tracks progress through the phases defined in AGENTS.md.
 
+## Phase 1 — Database Schema & ORM
+
+**Status:** SHIPPED & VERIFIED — commit in progress.
+
+### What was built
+
+- Prisma migration `20260813145830_init` (written via `prisma migrate dev`): `users`, `emergency_contacts`, `alerts`, `alert_locations`, `activity_logs` + `AlertStatus` enum (`sent|acknowledged|resolved`).
+- Unique + FK constraints: user email/phone/firebase_uid; contact `(user_id, phone)` / `(user_id, email)`; alert `tracking_token`, `last_location_id`; location index `(alert_id, recorded_at)`; all relations `ON DELETE CASCADE` except `Alert.last_location_id → SET NULL`.
+- `prisma/seed.ts` (idempotent, `npm run prisma:seed`): 2 users, 6 contacts, 3 alerts covering all three statuses, 10 locations (movement trails), 8 activity logs; `last_location_id` wired to the newest location per alert.
+- `docs/er-diagram.png` regenerated from a reproducible generator (`docs/generate_er_diagram.py`, PIL-only, no graphviz needed).
+- `.prettierignore` gains `*.py` + `prisma/migrations/*/*.sql`.
+
+### What was tested
+
+- `prisma migrate dev` created + applied the migration on a fresh container DB (5434); `prisma migrate status` → up to date.
+- Seed reruns cleanly (idempotent); verified via psql: per-user contact/alert counts, per-status alert distribution, 10 locations / 8 logs, zero orphan rows, correct `last_location_id` links.
+- `npm run typecheck`, `npm run lint`, `npm run build` all pass; Prettier clean.
+
+### Known gaps / TODOs for next phase
+
+- No `notification_deliveries` table yet (Phase 6 — intentionally deferred with migrations).
+- ER diagram is a static render from the script; re-run `docs/generate_er_diagram.py` if the schema changes.
+
 ## Phase 0 — Repo & Environment Setup
 
 **Status:** IMPLEMENTED & VERIFIED — commit pending.
