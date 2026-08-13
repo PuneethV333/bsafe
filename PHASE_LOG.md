@@ -2,6 +2,34 @@
 
 Tracks progress through the phases defined in AGENTS.md.
 
+## Phase 4 — User Profile & Emergency Contacts
+
+**Status:** SHIPPED & VERIFIED — commit pending.
+
+### What was built
+
+- **API — Users** (`apps/api/src/users/`): `GET /users/me` (30/min per user, profile cached 60s, reuses the `profile:{firebaseUid}` key) and `PATCH /users/me` (10/min, update name/phone, cache invalidated). `UpdateUserDto` with name length + E.164-ish phone validation.
+- **API — Contacts** (`apps/api/src/contacts/`): full `GET` (30/min, cached 30s), `POST` (10/min), `PATCH :id`, `DELETE :id` (10/min).
+  - Create requires phone **or** email (400 otherwise), enforces a 5-contact cap (400), and rejects duplicates by phone/email (409, unique-constraint backstop + P2002 catch). Ownership-scoped lookups (other users' contacts → 404, no existence leak).
+  - Every write (`POST`/`PATCH`/`DELETE`) invalidates `contacts:{userId}`; reads populate it with a 30s TTL.
+  - `CreateContactDto`/`UpdateContactDto` validated by the global `ValidationPipe` (whitelist + forbidNonWhitelisted).
+- **Web**: `lib/users.ts` (`useProfile` now hits `GET /users/me`, `useUpdateProfile` PATCH + invalidate), `lib/contacts.ts` (`useContacts`, `useCreateContact`, `useUpdateContact`, `useDeleteContact` — all write mutations invalidate the `contacts` query).
+  - `ContactsPage` (`/contacts`): list + add/edit/remove, inline forms, error surfacing, counter `n/5`, add-form disabled at the cap.
+  - `ProfilePage` (`/me`): edit name/phone, form keyed by profile id (no sync-setState-in-render).
+  - `HomePage`: nav (home/contacts/profile), SOS section **blocked with zero contacts** (CTA to add one) and shown ready-but-inert with ≥1.
+
+### What was tested
+
+- `npm run typecheck` / `lint` / `build` clean on both apps.
+- Boot smoke (Redis + Firebase + Postgres configured): `GET /api/health` 200; `GET/POST /api/contacts` and `GET /api/users/me` without a token → 401 "Missing or malformed Authorization header".
+- Real-stack probe against compiled services + seeded DB: empty list, create populates cache (30s TTL), duplicate phone/email → 409, 6th contact → 400 "Maximum of 5 contacts allowed", `PATCH`/`DELETE` invalidate the contacts cache, deleted row gone, profile cache populated/invalidated on `PATCH /users/me`. Cache serve proven by seeding a marker and reading it back through `list()`.
+
+### Known gaps / TODOs for next phase
+
+- Phone provider (recaptcha) OTP not in scope on web — email/password only.
+- SOS reaching the trigger surface (Phase 5) is still gated/placeholder on HomePage.
+- Contact list ordering is `createdAt asc` — no pinning/reordering yet.
+
 ## Phase 3 — Redis, Caching & Rate Limiting
 
 **Status:** SHIPPED & VERIFIED — commit pending.

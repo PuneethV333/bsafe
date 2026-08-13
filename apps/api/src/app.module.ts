@@ -5,6 +5,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 import { CacheModule } from './cache/cache.module';
+import { ContactsModule } from './contacts/contacts.module';
 import { FirebaseAuthGuard } from './common/guards/firebase-auth.guard';
 import { HealthController } from './health/health.controller';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -12,6 +13,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { RedisThrottlerStorage } from './redis/redis-throttler.storage';
 import { RedisService } from './redis/redis.service';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { RedisService } from './redis/redis.service';
     CacheModule,
     PrismaModule,
     AuthModule,
+    UsersModule,
+    ContactsModule,
     NotificationsModule,
     ThrottlerModule.forRootAsync({
       inject: [RedisService],
