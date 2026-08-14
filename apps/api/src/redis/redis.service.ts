@@ -16,6 +16,17 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       lazyConnect: false,
       maxRetriesPerRequest: 3,
     });
+    this.logger.log(
+      `Redis connecting to ${this.client.options.host}:${this.client.options.port}`,
+    );
+    this.client.on('error', (err: unknown) => {
+      const addresses = (err as { errors?: Array<{ address?: string; port?: number; code?: string }> })
+        ?.errors?.map((e) => `${e.address}:${e.port} (${e.code ?? 'errno'})`)
+        .join(', ');
+      this.logger.error(
+        `ioredis error: ${(err as Error)?.message ?? String(err)}${addresses ? ` -> ${addresses}` : ''}`,
+      );
+    });
     await this.client.ping();
     this.logger.log('Redis connected');
   }
