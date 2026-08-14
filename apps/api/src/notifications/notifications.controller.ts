@@ -6,16 +6,19 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { NotificationDeliveryDto } from '@bsafe/shared-types';
+import { AdminGuard } from '../common/guards/admin.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UsersService } from '../users/users.service';
 import { NotificationsService } from './notifications.service';
 
 /**
- * Delivery-status visibility + manual retry. The retry route is scoped to the
- * alert owner for now; it becomes admin-only in Phase 8 (Admin dashboard).
+ * Delivery-status visibility (owner) + manual retry (admin).
+ * Retry is admin-gated per the route table — owners read status, admins
+ * re-drive failed deliveries from the dashboard.
  */
 @Controller('notifications')
 export class NotificationsController {
@@ -35,14 +38,13 @@ export class NotificationsController {
   }
 
   @Post(':alertId/retry')
+  @UseGuards(AdminGuard)
   @HttpCode(HttpStatus.ACCEPTED)
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async retry(
-    @CurrentUser('uid') uid: string,
     @Param('alertId', new ParseUUIDPipe()) alertId: string,
   ): Promise<{ requeued: number }> {
-    const userId = await this.users.resolveLocalUserId(uid);
-    const requeued = await this.notifications.retryFailed(userId, alertId);
+    const requeued = await this.notifications.retryFailedAdmin(alertId);
     return { requeued };
   }
 }

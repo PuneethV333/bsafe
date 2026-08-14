@@ -2,6 +2,38 @@
 
 Tracks progress through the phases defined in AGENTS.md.
 
+## Phase 8 — Admin/Monitoring Dashboard
+
+**Status:** SHIPPED & VERIFIED — commit pending.
+
+### What was built
+
+- **Admin authorization**:
+  - `users.is_admin` boolean column (migration `20260814161940_user_is_admin`).
+  - `ADMIN_EMAILS` env allowlist — `AuthService.syncUser` grants `isAdmin` on every login for listed emails (new users, email-linked users, and existing users are promoted live). Exposed in `UserDto` so the UI can conditionally show the Admin nav.
+  - `AdminGuard` (`common/guards/admin.guard.ts`) — runs after the global Firebase guard, 403 unless the caller's local user row has `is_admin`.
+- **Admin API** (`apps/api/src/admin/`, both `@UseGuards(AdminGuard)` + own `@Throttle` per route table §3):
+  - `GET /admin/alerts` (30/min) — cross-user alert table with filters (`status`, `from`, `to`, `userId`) + offset pagination; `acknowledgedAt` derived from the first `acknowledged` activity-log event; delivery sent/failed counts per alert.
+  - `GET /admin/reports` (10/min) — read-only KPIs: totals, active-now (24h), ack rate, alerts/day (30-day raw-SQL series), avg time-to-acknowledge and avg time-to-resolve.
+- **Notifications retry → admin** (route table §3): `POST /notifications/:alertId/retry` is now `AdminGuard`-gated via non-owner-scoped `retryFailedAdmin` (was owner-scoped). `GET .../status` stays owner-scoped.
+- **Web**: `lib/admin.ts` hooks, `pages/admin/AdminDashboard.tsx` (KPI cards, 30-day bar chart, filterable alerts table, per-alert Retry for failed deliveries), `AdminRoute` (protected + admin-gated, 403-style screen for non-admins), `/admin` route, and an "Admin" nav link on Home shown only to admins.
+
+### What was tested
+
+- `typecheck` / `lint` / `build` clean on both apps.
+- Service probe (compiled app, real Postgres + Redis, `ADMIN_EMAILS=admin@x.io,listed@x.io`): listed → admin, non-listed → not; existing listed user promoted on re-sync; AdminGuard allows admin / 403 non-admin / 403 no claims; `listAlerts` maps user, acknowledgedAt (from activity log), location/delivery counts and honors status/userId/date filters; `getReports` returns totals + ack rate + per-day series + avg ack minutes; `retryFailedAdmin` requeues exactly the failed delivery (status→queued, attempts→0, error cleared). 21/21 PASS.
+- Boot smoke over HTTP (Firebase configured): admin routes + retry route → 401 unauthenticated and with a fake token; `/api/health` control → 200. (403 admin-allow path can't be exercised end-to-end without a real Firebase login — covered by the guard probe.)
+
+### Notes
+
+- **Prisma 7 quirk (bit us in raw SQL):** default table names are PascalCase — `Alert`, `ActivityLog`, `User`, … (no `@@map` on models; only columns are mapped to snake_case). Raw `$queryRaw` SQL must quote the real names (`FROM "Alert"`). The ORM qualifies automatically, which is why only hand-written SQL broke. Worth a `@@map` pass in Phase 9 or documenting in the README.
+- Admin is driven by an email allowlist + DB flag (Firebase is auth-only by design — no custom claims). Promote by adding the email to `ADMIN_EMAILS` and having them log in once.
+- `profile` cache is 60s, so an admin flag change propagates within a minute.
+
+### Known gaps / TODOs for next phase
+
+- Phase 9 (hardening): add `@@map` snake_case table names to kill the raw-SQL gotcha; mobile-responsive pass on the admin table (already scrollable, verify on small screens); code-split Leaflet; validate all routes have their own `@Throttle`; load-check the location-update path.
+
 ## Phase 7 — Alert Status Tracking & Contact View
 
 **Status:** SHIPPED & VERIFIED — commit pending.

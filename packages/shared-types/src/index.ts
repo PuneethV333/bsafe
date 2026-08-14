@@ -6,6 +6,7 @@ export interface UserDto {
   email?: string | null;
   phone?: string | null;
   firebaseUid: string;
+  isAdmin: boolean;
   createdAt: string;
 }
 
@@ -77,4 +78,32 @@ export interface AlertTrackingDto {
   resolvedAt?: string | null;
   lastLocation?: AlertLocationDto | null;
   locationCount: number;
+}
+
+/** One row of the admin alert table (cross-user). */
+export interface AdminAlertRowDto {
+  id: string;
+  status: AlertStatus;
+  userName: string;
+  userEmail?: string | null;
+  triggeredAt: string;
+  acknowledgedAt?: string | null;
+  resolvedAt?: string | null;
+  locationCount: number;
+  deliveriesSent: number;
+  deliveriesFailed: number;
+}
+
+/** Read-only admin KPI reporting. */
+export interface AdminReportDto {
+  totals: {
+    alerts: number;
+    acknowledged: number;
+    resolved: number;
+  };
+  activeNow: number;
+  ackRate: number;
+  alertsPerDay: { day: string; count: number }[];
+  avgAcknowledgeMinutes?: number | null;
+  avgResolveMinutes?: number | null;
 }

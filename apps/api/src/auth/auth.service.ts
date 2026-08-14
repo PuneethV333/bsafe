@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { UserDto } from '@bsafe/shared-types';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import { CacheService } from '../cache/cache.service';
@@ -17,6 +18,7 @@ function toUserDto(user: {
   email: string | null;
   phone: string | null;
   firebaseUid: string;
+  isAdmin: boolean;
   createdAt: Date;
 }): UserDto {
   return {
@@ -25,6 +27,7 @@ function toUserDto(user: {
     email: user.email,
     phone: user.phone,
     firebaseUid: user.firebaseUid,
+    isAdmin: user.isAdmin,
     createdAt: user.createdAt.toISOString(),
   };
 }
@@ -35,6 +38,7 @@ export class AuthService {
     private readonly firebase: FirebaseAdminService,
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
+    private readonly config: ConfigService,
   ) {}
 
   /** Verify a Firebase ID token and return its claims. */
@@ -48,10 +52,23 @@ export class AuthService {
   /**
    * Create or link a local `users` row for an authenticated Firebase user.
    * First login (or any later login) upserts the row keyed by firebase_uid.
+   * Emails listed in ADMIN_EMAILS are granted `isAdmin` on every sync.
    */
   async syncUser(uid: string, claims: DecodedIdToken): Promise<UserDto> {
+    const listed = this.isListedAdmin(claims.email);
+
     const existing = await this.prisma.user.findUnique({ where: { firebaseUid: uid } });
-    if (existing) return toUserDto(existing);
+    if (existing) {
+      if (listed && !existing.isAdmin) {
+        const promoted = await this.prisma.user.update({
+          where: { id: existing.id },
+          data: { isAdmin: true },
+        });
+        await this.cache.del(`profile:${uid}`);
+        return toUserDto(promoted);
+      }
+      return toUserDto(existing);
+    }
 
     const email = claims.email ?? null;
     if (email) {
@@ -59,7 +76,7 @@ export class AuthService {
       if (byEmail) {
         const linked = await this.prisma.user.update({
           where: { id: byEmail.id },
-          data: { firebaseUid: uid },
+          data: { firebaseUid: uid, isAdmin: listed || byEmail.isAdmin },
         });
         await this.cache.del(`profile:${uid}`);
         return toUserDto(linked);
@@ -73,6 +90,7 @@ export class AuthService {
           name: claims.name ?? 'Anonymous',
           email,
           phone: claims.phone_number ?? null,
+          isAdmin: listed,
         },
       });
       await this.cache.del(`profile:${uid}`);
@@ -85,6 +103,16 @@ export class AuthService {
       }
       throw e;
     }
+  }
+
+  private isListedAdmin(email?: string | null): boolean {
+    if (!email) return false;
+    const allowlist = this.config
+      .get<string>('ADMIN_EMAILS', '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+    return allowlist.includes(email.toLowerCase());
   }
 
   /** Load the local user row for an authenticated Firebase user (cached 60s). */

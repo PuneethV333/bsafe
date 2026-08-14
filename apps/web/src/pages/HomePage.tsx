@@ -43,6 +43,11 @@ export function HomePage() {
           <Link to="/me" className="block rounded px-3 py-1.5 text-slate-200 hover:bg-slate-800">
             Profile
           </Link>
+          {profile.data?.isAdmin && (
+            <Link to="/admin" className="block rounded px-3 py-1.5 text-slate-200 hover:bg-slate-800">
+              Admin
+            </Link>
+          )}
         </nav>
         <button
           onClick={() => signOut()}

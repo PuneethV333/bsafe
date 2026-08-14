@@ -82,14 +82,14 @@ export class NotificationsService {
     return enqueued;
   }
 
-  /** Re-queue every failed delivery for an alert and enqueue fresh jobs. */
-  async retryFailed(userId: string, alertId: string): Promise<number> {
-    const alert = await this.findOwnedAlert(userId, alertId);
-    const userName =
-      (await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { name: true },
-      }))?.name ?? 'Unknown';
+  /** Re-queue every failed delivery for an alert (admin-gated) and enqueue fresh jobs. */
+  async retryFailedAdmin(alertId: string): Promise<number> {
+    const alert = await this.prisma.alert.findUnique({
+      where: { id: alertId },
+      include: { user: { select: { name: true } } },
+    });
+    if (!alert) throw new NotFoundException('Alert not found.');
+
     const deliveries = await this.prisma.notificationDelivery.findMany({
       where: { alertId, status: 'failed' },
       include: { contact: true },
@@ -107,7 +107,7 @@ export class NotificationsService {
         deliveryId: delivery.id,
         channel: delivery.channel,
         trackingUrl: `${this.trackingBase()}/track/${alert.trackingToken}`,
-        userName,
+        userName: alert.user.name,
         triggeredAt: alert.triggeredAt.toISOString(),
         contactPhone: delivery.contact.phone ?? undefined,
         contactEmail: delivery.contact.email ?? undefined,

@@ -56,6 +56,7 @@ export function toUserDto(user: {
   email: string | null;
   phone: string | null;
   firebaseUid: string;
+  isAdmin: boolean;
   createdAt: Date;
 }): UserDto {
   return {
@@ -64,6 +65,7 @@ export function toUserDto(user: {
     email: user.email,
     phone: user.phone,
     firebaseUid: user.firebaseUid,
+    isAdmin: user.isAdmin,
     createdAt: user.createdAt.toISOString(),
   };
 }
