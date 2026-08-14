@@ -1,24 +1,28 @@
-import { Global, Inject, Injectable, Module, OnModuleDestroy } from '@nestjs/common';
-import type { Queue } from 'bullmq';
-import { NOTIFICATION_QUEUE, notificationQueueProvider } from './notification-queue';
-
-@Injectable()
-class NotificationQueueLifecycle implements OnModuleDestroy {
-  constructor(@Inject(NOTIFICATION_QUEUE) private readonly queue: Queue) {}
-
-  async onModuleDestroy(): Promise<void> {
-    // Queue.close() is idempotent — safe whether or not the queue is already closed.
-    await this.queue.close();
-  }
-}
+import { Global, Module } from '@nestjs/common';
+import {
+  NOTIFICATION_QUEUE,
+  notificationQueueProvider,
+} from './notification-queue';
+import { NotificationsController } from './notifications.controller';
+import { NotificationsService } from './notifications.service';
+import { NotificationsWorker } from './notifications.processor';
+import { smsProviderFactory } from './providers/twilio.provider';
+import { emailProviderFactory } from './providers/sendgrid.provider';
 
 /**
- * Notification dispatch queue provisioned now (Phase 3 infra); jobs are enqueued
- * and processed from Phase 6 (Twilio/SendGrid workers).
+ * Notification dispatch (Phase 6): BullMQ queue + worker dispatch jobs to
+ * Twilio/SendGrid. Providers are dry-run by default (NOTIFICATIONS_DRY_RUN).
  */
 @Global()
 @Module({
-  providers: [notificationQueueProvider, NotificationQueueLifecycle],
-  exports: [NOTIFICATION_QUEUE],
+  controllers: [NotificationsController],
+  providers: [
+    notificationQueueProvider,
+    smsProviderFactory,
+    emailProviderFactory,
+    NotificationsService,
+    NotificationsWorker,
+  ],
+  exports: [NotificationsService, NOTIFICATION_QUEUE],
 })
 export class NotificationsModule {}

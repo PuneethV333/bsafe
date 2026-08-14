@@ -10,6 +10,7 @@ import type {
   AlertLocationDto,
 } from '@bsafe/shared-types';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { TriggerAlertDto, UpdateLocationDto } from './dto';
 
 type AlertWithLocation = {
@@ -29,11 +30,16 @@ type AlertWithLocation = {
 
 @Injectable()
 export class AlertsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   /**
-   * Fire a silent SOS. Creates the alert in `sent` state and, when the client
-   * was able to grab an initial fix, records the first location immediately.
+   * Fire a silent SOS. Creates the alert in `sent` state, records the first
+   * location when the client grabbed an initial fix, then enqueues one
+   * notification job per reachable contact channel (queued in Postgres first,
+   * dispatched async by the BullMQ worker — never synchronously).
    */
   async create(userId: string, dto: TriggerAlertDto): Promise<AlertDto> {
     const alert = await this.prisma.alert.create({ data: { userId } });
@@ -46,6 +52,7 @@ export class AlertsService {
         accuracy: dto.accuracy,
       });
     }
+    await this.notifications.enqueueForAlert(alert, userId);
     return this.getAlert(userId, alert.id);
   }
 

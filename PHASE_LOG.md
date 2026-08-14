@@ -2,6 +2,44 @@
 
 Tracks progress through the phases defined in AGENTS.md.
 
+## Phase 6 — Notifications (Twilio SMS + SendGrid email via BullMQ)
+
+**Status:** SHIPPED & VERIFIED — commit pending.
+
+### What was built
+
+- **Schema** — `NotificationDelivery` model (`alert_id`, `contact_id`, `channel` enum, `status` enum `queued|sent|failed`, `attempts`, `last_error`, `sent_at`) with `@@unique([alertId, contactId, channel])`; relations added to `Alert` and `EmergencyContact`. Migration `20260814154347_notification_deliveries`.
+- **Providers** (`notifications/providers/`):
+  - `TwilioSmsProvider` — Twilio Messaging Service; phone normalized to E.164 at send time (contacts allow loose formats today).
+  - `SendGridEmailProvider` — `@sendgrid/mail`; requires `SENDGRID_FROM_EMAIL` in real mode.
+  - **Dry-run by default** (`NOTIFICATIONS_DRY_RUN=true`): logs the would-be SMS/email and marks the delivery `sent` without any provider call — prevents accidental charges in dev; set `false` in staging for real sends (acceptance).
+- **BullMQ worker** (`notifications.processor.ts`) — in-process worker (concurrency 5) on the `notifications` queue: increments `attempts`, dispatches to the right provider, marks `sent` on success; on failure marks `failed` only after BullMQ exhausts its default `3` attempts with exponential 5s backoff.
+- **`NotificationsService`** — `enqueueForAlert` (creates a `queued` delivery row per contact per reachable channel, then enqueues one BullMQ job each — never dispatched synchronously from the request thread), `getStatus` (owner-scoped, with contact name), `retryFailed` (resets `failed` → `queued`, clears error, re-enqueues), plus `beginAttempt` / `markSent` / `markFailed`.
+- **`NotificationsController`** — `GET /notifications/:alertId/status` (30/min) and `POST /notifications/:alertId/retry` (5/min); both owner-scoped (retry becomes admin-only in Phase 8).
+- **Hook** — `AlertsService.create()` now enqueues notifications right after the alert is created (fast queued-row writes; the async dispatch happens in the worker).
+- **Env** — added `WEB_BASE_URL` (builds the `/track/:token` tracking link), `NOTIFICATIONS_DRY_RUN`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME` to `.env.example`.
+
+### What was tested
+
+- `typecheck` / `lint` / `build` clean on both apps.
+- Dry-run integration probe (compiled app, real Postgres + Redis): user with a phone-only, an email-only, and a both-channel contact → exactly **4** delivery rows (2 sms + 2 email) all `sent` with `attempts=1`; the both-contact gets independent per-channel rows; `getStatus` returns contact names; a non-owner is denied.
+- Provider-failure path: stub provider throws → delivery `failed` after **3** attempts with `last_error` set; `retryFailed` resets it to `queued`, `attempts=0`, error cleared, and re-enqueues 1 job.
+- Boot smoke: `/api/health` 200; both `/notifications` routes 401 unauthenticated; the worker logs `notifications worker started (twilio-dry-run / sendgrid-dry-run)`.
+
+### Trade-offs / notes
+
+- `retry` is owner-scoped for now; the route table says Admin — swap to the admin guard in Phase 8.
+- "sent" means accepted by the provider (Twilio `messages.create` is an async enqueue; SendGrid API accept) — actual delivery confirmation (webhooks) is intentionally out of scope; this matches PRD "sent ≠ delivered".
+- Worker runs in-process for simplicity; split into a standalone process/container when scaling to multiple API instances (Phase 10).
+- Contact phone normalization to E.164 happens at send time; tightening the Phase 4 contact validation is a Phase 9 hardening item.
+- The tracking link is already baked into both SMS/email bodies and "expires" semantically once the alert resolves — the actual expiry behavior is implemented in Phase 7 (tracking page shows resolved/closed state for resolved alerts).
+
+### Known gaps / TODOs for next phase
+
+- Phase 7: public `/track/:token` page (live map + status + timestamps + acknowledge) — the tokenized link the notifications carry.
+- Delivery status visibility for the alert owner in the web UI (the API endpoint exists; no screen yet).
+- Real staging send (dry-run off) requires confirmed Twilio/SendGrid sender/from values.
+
 ## Phase 5 — Core SOS Trigger + Live Location
 
 **Status:** SHIPPED & VERIFIED — commit pending.

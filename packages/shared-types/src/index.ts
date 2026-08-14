@@ -52,3 +52,18 @@ export interface UpdateLocationInput {
 }
 
 export type AlertStatusUpdate = Extract<AlertStatus, 'acknowledged' | 'resolved'>;
+
+export type NotificationChannel = 'sms' | 'email';
+export type NotificationStatus = 'queued' | 'sent' | 'failed';
+
+export interface NotificationDeliveryDto {
+  id: string;
+  contactId: string;
+  contactName: string;
+  channel: NotificationChannel;
+  status: NotificationStatus;
+  attempts: number;
+  lastError?: string | null;
+  sentAt?: string | null;
+  createdAt: string;
+}

@@ -10,10 +10,13 @@ export type NotificationChannel = 'sms' | 'email';
 export interface NotificationJob {
   alertId: string;
   contactId: string;
+  deliveryId: string;
   channel: NotificationChannel;
   trackingUrl: string;
   userName: string;
   triggeredAt: string;
+  contactPhone?: string;
+  contactEmail?: string;
 }
 
 export const notificationQueueProvider: FactoryProvider<Queue<NotificationJob>> = {
