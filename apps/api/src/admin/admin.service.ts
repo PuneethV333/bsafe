@@ -77,18 +77,18 @@ export class AdminService {
         }),
         this.prisma.$queryRaw<{ day: Date; count: number }[]>`
           SELECT date_trunc('day', triggered_at)::date AS day, COUNT(*)::int AS count
-          FROM "Alert"
+          FROM alerts
           WHERE triggered_at >= now() - interval '30 days'
           GROUP BY 1 ORDER BY 1
         `,
         this.prisma.$queryRaw<{ minutes: number | null }[]>`
           SELECT AVG(EXTRACT(EPOCH FROM (l.timestamp - a.triggered_at)) / 60.0)::float8 AS minutes
-          FROM "ActivityLog" l JOIN "Alert" a ON a.id = l.alert_id
+          FROM activity_logs l JOIN alerts a ON a.id = l.alert_id
           WHERE l.event_type = 'acknowledged'
         `,
         this.prisma.$queryRaw<{ minutes: number | null }[]>`
           SELECT AVG(EXTRACT(EPOCH FROM (a.resolved_at - a.triggered_at)) / 60.0)::float8 AS minutes
-          FROM "Alert" a WHERE a.resolved_at IS NOT NULL
+          FROM alerts a WHERE a.resolved_at IS NOT NULL
         `,
       ]);
 

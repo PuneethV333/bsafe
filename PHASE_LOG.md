@@ -2,6 +2,30 @@
 
 Tracks progress through the phases defined in AGENTS.md.
 
+## Phase 9 — Non-Functional Hardening
+
+**Status:** SHIPPED & VERIFIED — commit pending.
+
+### What was done
+
+- **Route rate-limit audit** — every REST route carries its own `@Throttle()` override (no bare global default): `/` 60, `/health` 60 per IP, `/auth/sync` 10, `/auth/me` 30, `/users/me` GET 30 / PATCH 10, `/contacts` GET 30 / POST·PATCH·DELETE 10, `/alerts/trigger` 5, `/alerts/:id/location` 60, `/alerts/:id/status` 20, `/alerts/:id` 30, `/alerts` 30, `/tracking/:token` GET 20 per IP / POST ack 10 per IP, `/notifications/:alertId/status` 30, `/notifications/:alertId/retry` 5 (Admin), `/admin/alerts` 30, `/admin/reports` 10. WebSocket `updateLocation` already throttled to 1/5s per socket in the gateway (not covered by throttler).
+- **Validation/sanitization audit** — global `ValidationPipe(whitelist, forbidNonWhitelisted, transform)`; all `:id`/`:alertId` params use `ParseUUIDPipe`; tracking tokens are opaque and resolved only via service lookup; contact/user DTOs bound name/phone/email/relationship with `Length`/`Matches`/`IsEmail`; no `dangerouslySetInnerHTML` anywhere (React escapes all user data). No gaps found.
+- **Prisma `@@map` snake_case tables** — added `@@map` to all 6 models (`users`, `emergency_contacts`, `alerts`, `alert_locations`, `activity_logs`, `notification_deliveries`), killing the Phase 8 PascalCase raw-SQL footgun. Migration is a hand-written `RENAME` (Prisma's `migrate dev` would have DROP+CREATE'd and lost data in non-interactive mode); data preserved and verified by matching ORM/raw counts. Raw SQL in `admin.service.ts` reverted to unqualified snake_case names.
+- **Leaflet code-split** — `TrackAlertPage` lazy-loaded (`React.lazy` + Suspense). Leaflet now ships in its own ~154 kB chunk (`gzip 45 kB`) loaded only when a tracking link is opened; main bundle ~491 kB.
+- **Mobile-responsive pass** — HomePage shell stacks on small screens (sidebar → top bar with horizontally scrolling nav; `lg:` restores the column layout); admin alerts table already wraps in `overflow-x-auto` with a `min-w-[820px]` table; tracking view is `max-w-md` centered with a full-width map; contacts/profile/login are centered `max-w-md`/`max-w-sm`. Verified responsive classes compile; visual pass on a real phone is a Phase 9 leftover (no device available).
+
+### What was tested
+
+- `typecheck` / `lint` / `build` clean on both apps.
+- **Latency / load** (compiled app, local Postgres + Redis, N=30): alert create (dispatch incl. delivery enqueue) **avg 47 ms, p95 83 ms, max 117 ms** (<2 s acceptance met); location update **avg 13 ms, p95 19 ms, max 22 ms**.
+- **Redis-backed throttling under repeated hits**: 70 rapid `GET /api/health` → 59×200 + 11×429 (60/min per IP). Storage is `RedisThrottlerStorage` (RedisService-backed), not in-memory.
+- End-to-end SOS → notify → resolve flow was already exercised in Phase 6/7 probes; Phase 9 re-ran the full service stack (create, location stream, ack, resolve, admin reports) without regression.
+
+### Known gaps / TODOs for next phase
+
+- Phase 10 (deployment): visual responsive check on a physical phone; consider Pinia/downgrade of Leaflet tile provider for production; document the load numbers in `docs/deployment.md`.
+- `migrate dev --create-only` is unusable in non-interactive shells (Prisma 7) — schema renames must be hand-written (as done here) or run via `script -qec`.
+
 ## Phase 8 — Admin/Monitoring Dashboard
 
 **Status:** SHIPPED & VERIFIED — commit pending.

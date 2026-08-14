@@ -18,6 +18,8 @@ model User {
   updatedAt   DateTime             @updatedAt @map("updated_at")
   contacts    EmergencyContact[]
   alerts      Alert[]
+
+  @@map("users")
 }
 
 model EmergencyContact {
@@ -35,6 +37,7 @@ model EmergencyContact {
   @@unique([userId, phone])
   @@unique([userId, email])
   @@index([userId])
+  @@map("emergency_contacts")
 }
 
 enum AlertStatus {
@@ -59,6 +62,7 @@ model Alert {
 
   @@index([userId])
   @@index([status])
+  @@map("alerts")
 }
 
 model AlertLocation {
@@ -72,6 +76,7 @@ model AlertLocation {
   lastLocationOf Alert? @relation("LastLocation")
 
   @@index([alertId, recordedAt])
+  @@map("alert_locations")
 }
 
 model ActivityLog {
@@ -83,6 +88,7 @@ model ActivityLog {
   timestamp DateTime @default(now())
 
   @@index([alertId])
+  @@map("activity_logs")
 }
 
 enum NotificationChannel {
@@ -113,4 +119,5 @@ model NotificationDelivery {
   @@unique([alertId, contactId, channel])
   @@index([alertId])
   @@index([status])
+  @@map("notification_deliveries")
 }

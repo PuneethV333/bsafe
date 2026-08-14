@@ -22,8 +22,8 @@ export function HomePage() {
     );
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100">
-      <aside className="flex w-64 flex-col justify-between border-r border-slate-800 p-4">
+    <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100 lg:flex-row">
+      <aside className="flex w-full flex-col gap-4 border-b border-slate-800 p-4 lg:w-64 lg:justify-between lg:gap-0 lg:border-b-0 lg:border-r">
         <div>
           <h1 className="text-2xl font-bold text-red-500">bSafe</h1>
           <p className="mt-2 text-sm text-slate-300">{display(profile.data)}</p>
@@ -33,18 +33,18 @@ export function HomePage() {
             </p>
           )}
         </div>
-        <nav className="space-y-1 text-sm">
-          <Link to="/" className="block rounded px-3 py-1.5 text-slate-200 hover:bg-slate-800">
+        <nav className="flex items-center gap-1 overflow-x-auto lg:flex-col lg:items-stretch lg:gap-0 lg:space-y-1">
+          <Link to="/" className="whitespace-nowrap rounded px-3 py-1.5 text-slate-200 hover:bg-slate-800">
             Home
           </Link>
-          <Link to="/contacts" className="block rounded px-3 py-1.5 text-slate-200 hover:bg-slate-800">
+          <Link to="/contacts" className="whitespace-nowrap rounded px-3 py-1.5 text-slate-200 hover:bg-slate-800">
             Emergency contacts ({contacts.data ? count : '…'})
           </Link>
-          <Link to="/me" className="block rounded px-3 py-1.5 text-slate-200 hover:bg-slate-800">
+          <Link to="/me" className="whitespace-nowrap rounded px-3 py-1.5 text-slate-200 hover:bg-slate-800">
             Profile
           </Link>
           {profile.data?.isAdmin && (
-            <Link to="/admin" className="block rounded px-3 py-1.5 text-slate-200 hover:bg-slate-800">
+            <Link to="/admin" className="whitespace-nowrap rounded px-3 py-1.5 text-slate-200 hover:bg-slate-800">
               Admin
             </Link>
           )}
@@ -57,7 +57,7 @@ export function HomePage() {
         </button>
       </aside>
 
-      <main className="flex-1 overflow-y-auto p-6">
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6">
         <h2 className="text-xl font-semibold">SOS</h2>
         <SosPanel />
       </main>
