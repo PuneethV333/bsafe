@@ -38,6 +38,16 @@ export class UsersService {
     await this.cache.del(`profile:${firebaseUid}`);
     return toUserDto(updated);
   }
+
+  /**
+   * Resolve a Firebase uid to the local user's UUID — the FK used by
+   * `emergency_contacts.user_id` and `alerts.user_id`. Controllers receive the
+   * Firebase uid from the ID token, so every write path must go through here.
+   */
+  async resolveLocalUserId(firebaseUid: string): Promise<string> {
+    const user = await this.getProfile(firebaseUid);
+    return user.id;
+  }
 }
 
 export function toUserDto(user: {

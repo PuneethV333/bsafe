@@ -17,9 +17,38 @@ export interface EmergencyContactDto {
   relationship?: string | null;
 }
 
+export interface AlertLocationDto {
+  id: string;
+  latitude: number;
+  longitude: number;
+  accuracy?: number | null;
+  recordedAt: string;
+}
+
 export interface AlertDto {
   id: string;
   status: AlertStatus;
   triggeredAt: string;
   resolvedAt?: string | null;
+  lastLocation?: AlertLocationDto | null;
+  locationCount: number;
 }
+
+export type AlertListItemDto = AlertDto;
+
+export type TriggerType = 'tap' | 'longPress';
+
+export interface TriggerAlertInput {
+  triggerType?: TriggerType;
+  latitude?: number;
+  longitude?: number;
+  accuracy?: number;
+}
+
+export interface UpdateLocationInput {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+}
+
+export type AlertStatusUpdate = Extract<AlertStatus, 'acknowledged' | 'resolved'>;

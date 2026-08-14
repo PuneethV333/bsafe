@@ -2,6 +2,49 @@
 
 Tracks progress through the phases defined in AGENTS.md.
 
+## Phase 5 — Core SOS Trigger + Live Location
+
+**Status:** SHIPPED & VERIFIED — commit pending.
+
+### What was built
+
+- **API — Alerts** (`apps/api/src/alerts/`):
+  - `POST /alerts/trigger` (5/min) — fires a silent SOS, creates the alert in `sent`, records an initial fix when the client could grab one, writes a `triggered` activity log.
+  - `POST /alerts/:id/location` (60/min) — REST fallback location ping; persists to `alert_locations` and promotes it to `alerts.last_location_id`. Rejected (409) once the alert is resolved.
+  - `PATCH /alerts/:id/status` (20/min) — `sent → acknowledged → resolved` transitions with validation (`re-ack` and `re-resolve` → 400), sets `resolved_at`, logs each transition.
+  - `GET /alerts/:id` (30/min) and `GET /alerts` (30/min) — detail/history with `lastLocation` + `locationCount`; ownership-scoped (404 for others' alerts).
+  - **`AlertsGateway`** (Socket.IO, default path): handshake middleware requires a valid Firebase ID token **and** a local user row, resolving the local UUID once into `socket.data.userId`; `joinAlert` (ownership-checked) joins room `alert:{id}`; `updateLocation` throttled to one per 5s per socket, persisted, then broadcast as `location:update` to the alert room. Connection without a token is rejected.
+- **shared-types**: `AlertLocationDto`, richer `AlertDto` (`lastLocation`, `locationCount`), `AlertListItemDto`, `TriggerType`, `TriggerAlertInput`, `UpdateLocationInput`, `AlertStatusUpdate`.
+- **Web**:
+  - `hooks/useGeolocation.ts` — permission requested only via `requestPermission()` (onboarding, never at trigger time); high-accuracy `watchPosition`; degraded handling: denied/unsupported → last-known position retained for degraded sharing.
+  - `components/SosButton.tsx` — silent trigger: single tap **and** 600ms long-press both fire; the only feedback on success is the button dimming (no sound, no modal, no animation).
+  - `components/SosPanel.tsx` — location-onboarding card (Enable / degraded note), SOS gate (needs ≥1 contact), trigger, and the live stream: 12s `watchPosition` pushes over WebSocket with automatic REST fallback, last-known pushed when the tab backgrounds, streaming stops on resolve (polled via `useAlert`), active alert id persisted to `localStorage` so streaming survives refresh.
+  - `lib/alerts.ts` (trigger/alert/list/status hooks + REST fallback), `lib/alertSocket.ts` (socket.io-client wrapper).
+  - Vite proxies `/socket.io` (ws: true) → :3000 so the client stays same-origin.
+
+### What was tested
+
+- `typecheck` / `lint` / `build` clean on both apps.
+- REST lifecycle probe (compiled `AlertsService` vs seeded Postgres): trigger with initial fix (count 1, lastLocation set), `addLocation` bumps `lastLocation`, cross-user access → 404, ack → `acknowledged`, re-ack → 400, resolve → `resolved_at` set, location-after-resolve → 409, re-resolve → 400, activity log `triggered → acknowledged → resolved`, history listing works.
+- **Socket.IO integration test** (real app booted via `@nestjs/testing` with a stubbed token verifier, real Postgres + Redis): token-authenticated connect → `joinAlert` ack → `updateLocation` ack + `location:update` broadcast received in-room + row persisted (count 2) → immediate 2nd ping rejected (no persist, no broadcast) → ping after resolve rejected (no persist, no broadcast).
+- Boot smoke against the real stack: `/api/health` 200; all `/alerts` + `/contacts` routes 401 without a token; Socket.IO handshake without a token rejected ("Missing Firebase token"); gateway log shows `joinAlert`/`updateLocation` subscriptions.
+
+### Bug caught & fixed (latent from Phase 4)
+
+- Controllers/gateway were passing the **Firebase uid** to services that key rows by the **local user UUID** (FK `user_id` → `users.id`). With a real token this would 500/FK-fail. Added `UsersService.resolveLocalUserId(firebaseUid)` (reuses the 60s profile cache) and wired it into `ContactsController`, `AlertsController`, and the gateway's connect middleware (resolved once per socket). Phase 4 probes bypassed this because they called services with the local id directly — real-token E2E would have caught it earlier; noted for Phase 9 manual walkthrough.
+
+### Rate-limit trade-off (per `BACKEND_FILES_AND_ROUTES.md` §4)
+
+- Kept the suggested `POST /alerts/trigger` 5/min — high enough for a genuine re-trigger, low enough to blunt abuse. Revisit after Phase 9 load testing.
+
+### Known gaps / TODOs for next phase
+
+- Nest's default WsException filter serializes rejected socket messages as a generic "Internal server error" (throttle/conflict details are hidden from the client). The web client treats socket failures as a REST-fallback trigger, so this is cosmetic today; a custom `WsExceptionFilter` can be added in Phase 9 hardening.
+- Gateway throttle is in-memory per instance (fine single-instance); Socket.IO Redis adapter deferred to Phase 10 (multi-instance).
+- No browser E2E yet — needs a real Firebase account + geolocation to click through the full trigger → stream → resolve loop (manual walkthrough for Phase 9).
+- `activity_logs.actor` stores `user:{localUuid}`; contact-acknowledge actors land in Phase 7.
+- WebSocket auto-reconnect uses Socket.IO defaults; token refresh mid-alert reconnects with a fresh token on the next mount (a long alert >1h would need a token-refresh listener — Phase 9 hardening).
+
 ## Phase 4 — User Profile & Emergency Contacts
 
 **Status:** SHIPPED & VERIFIED — commit pending.
