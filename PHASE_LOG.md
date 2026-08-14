@@ -2,6 +2,35 @@
 
 Tracks progress through the phases defined in AGENTS.md.
 
+## Phase 10 — Deployment
+
+**Status:** SHIPPED & VERIFIED.
+
+### What was built
+
+- **Backend live on Render** (`https://bsafe-api.onrender.com`, service `bsafe-api`): NestJS API with Firebase auth, Prisma→Neon, ioredis→Upstash, BullMQ notification queue. Build command (dashboard-set): `npm ci && npm install-scripts approve … && npm run build -w @bsafe/api`; start `npm run start -w @bsafe/api` (port 10000).
+- **Frontend live on Vercel** (`https://bsafe-zeta.vercel.app`): Vite build of `apps/web`, rootDirectory `apps/web`, `VITE_API_URL=https://bsafe-api.onrender.com` baked into the bundle, framework auto-detected.
+- **Managed datastores**: Neon Postgres `dry-hill-74512166` (migrations applied to `neondb`, the pooler target of the production `DATABASE_URL`); Upstash Redis (production `REDIS_URL`, `rediss://` TLS).
+- **Production env/secrets** in Render dashboard (Firebase admin creds, `ADMIN_EMAILS`, `NOTIFICATIONS_DRY_RUN=true`, `WEB_BASE_URL`, `CORS_ORIGINS=https://bsafe-zeta.vercel.app`). Vercel env in project settings. No secrets in git (`.env` gitignored; `.env.example` documents keys).
+- **Redis URL parsing bug fixed** (root cause of every failed deploy): ioredis only parses a connection URL when passed as a *string* argument; a `url` key inside an options object is silently ignored and ioredis falls back to `localhost:6379`. `redisConnection()` now parses `REDIS_URL` into `host`/`port`/`username`/`password`/`tls` so the spread works for both `new Redis({…})` and BullMQ's `connection`. Startup now logs the sanitized `REDIS_URL` host and the actual dial target for quick diagnosis.
+- **Uptime monitoring**: `GET /api/health` returns `{"status":"ok","redis":"PONG",…}` (also exercises Redis); can be hit by any external pinger. Deployment runbook → `docs/deployment.md`.
+
+### What was tested
+
+- `curl https://bsafe-api.onrender.com/api/health` → 200 `{"status":"ok","redis":"PONG",…}`.
+- CORS preflight from `Origin: https://bsafe-zeta.vercel.app` → `access-control-allow-origin` echoes the allowlisted origin (204).
+- `https://bsafe-zeta.vercel.app/` → 200, `<title>bSafe</title>`, API base `https://bsafe-api.onrender.com` present in the served JS bundle.
+- Redis dial verified: `Redis connecting to grateful-shiner-106986.upstash.io:6379` → `Redis connected` → `Nest application successfully started`.
+- Local reproduction: `{ url }` object → `localhost:6379`; parsed host/port/tls → `PONG` against Upstash.
+
+### Known gaps / TODOs
+
+- **Leaflet tile provider**: swap the default demo/OSM tile layer for a production-grade provider (Mapbox/MapTiler) in the tracking view.
+- **Visual responsive check on a physical phone** (Phase 9 leftover) — desktop/mobile emulation only so far.
+- **BullMQ worker runs in-process** on the single API instance; split into a standalone worker container when scaling to multiple API instances.
+- **Socket.IO**: gateway is single-instance (in-memory adapter); add the Socket.IO Redis adapter for multi-instance; ensure the reverse proxy (`ws`) terminates correctly in production.
+- **Uptime pinger**: health endpoint is ready; no external pinger (e.g. UptimeRobot) wired up yet — recommended next step.
+
 ## Phase 9 — Non-Functional Hardening
 
 **Status:** SHIPPED & VERIFIED — commit pending.
