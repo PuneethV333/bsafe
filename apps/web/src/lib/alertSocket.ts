@@ -1,6 +1,8 @@
 import type { AlertLocationDto } from '@bsafe/shared-types';
 import { io, type Socket } from 'socket.io-client';
 
+const API_ORIGIN = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+
 export interface AlertSocketPayload {
   alertId: string;
   latitude: number;
@@ -11,9 +13,10 @@ export interface AlertSocketPayload {
 /**
  * Open an authenticated Socket.IO connection for live alert streaming.
  * The handshake is rejected server-side unless `token` is a valid Firebase ID token.
+ * Without VITE_API_URL the client stays same-origin (Vite dev proxy / socket.io path).
  */
 export function openAlertSocket(token: string): Socket {
-  return io({ auth: { token } });
+  return API_ORIGIN ? io(API_ORIGIN, { auth: { token } }) : io({ auth: { token } });
 }
 
 export function joinAlertRoom(socket: Socket, alertId: string): void {

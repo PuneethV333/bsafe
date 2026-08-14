@@ -1,6 +1,7 @@
 import { FactoryProvider } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
+import { redisConnection } from '../redis/redis-config';
 
 /** DI token for the BullMQ `notifications` queue (consumed from Phase 6). */
 export const NOTIFICATION_QUEUE = 'NOTIFICATION_QUEUE';
@@ -23,10 +24,7 @@ export const notificationQueueProvider: FactoryProvider<Queue<NotificationJob>> 
   provide: NOTIFICATION_QUEUE,
   useFactory: (config: ConfigService) =>
     new Queue<NotificationJob>('notifications', {
-      connection: {
-        host: config.get<string>('REDIS_HOST', 'localhost'),
-        port: config.get<number>('REDIS_PORT', 6379),
-      },
+      connection: redisConnection(config),
       defaultJobOptions: {
         attempts: 3,
         backoff: { type: 'exponential', delay: 5000 },

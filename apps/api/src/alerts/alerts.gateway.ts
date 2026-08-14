@@ -27,7 +27,12 @@ interface LocationPayload {
   accuracy?: number;
 }
 
-@WebSocketGateway({ cors: { origin: true } })
+const CORS_ORIGINS = (process.env.CORS_ORIGINS ?? 'http://localhost:5173')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+@WebSocketGateway({ cors: { origin: CORS_ORIGINS } })
 export class AlertsGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {

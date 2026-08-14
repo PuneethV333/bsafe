@@ -1,14 +1,10 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-  OnModuleDestroy,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Worker } from 'bullmq';
 import type { Job } from 'bullmq';
 import { NotificationsService } from './notifications.service';
 import { type NotificationJob } from './notification-queue';
+import { redisConnection } from '../redis/redis-config';
 import {
   EMAIL_PROVIDER,
   SMS_PROVIDER,
@@ -37,10 +33,7 @@ export class NotificationsWorker implements OnModuleDestroy {
       'notifications',
       (job) => this.process(job),
       {
-        connection: {
-          host: this.config.get<string>('REDIS_HOST', 'localhost'),
-          port: this.config.get<number>('REDIS_PORT', 6379),
-        },
+        connection: redisConnection(this.config),
         concurrency: 5,
       },
     );
