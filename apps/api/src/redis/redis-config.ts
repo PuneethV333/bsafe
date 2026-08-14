@@ -1,7 +1,11 @@
 import type { ConfigService } from '@nestjs/config';
 
 export interface RedisConnection {
-  url: string;
+  host: string;
+  port: number;
+  username?: string;
+  password?: string;
+  tls?: Record<string, unknown>;
 }
 
 /**
@@ -10,6 +14,12 @@ export interface RedisConnection {
  * env var fails loudly instead of silently connecting to the wrong instance.
  * Shared by RedisService and the BullMQ queue/worker so every consumer talks
  * to the same instance.
+ *
+ * ioredis only parses a connection URL when it is passed as a string argument
+ * (`new Redis(url)`); a `url` key inside an options object is silently ignored
+ * and falls back to `localhost:6379`. We therefore parse the URL into
+ * host/port/tls here so it can be spread into an options object for both
+ * `new Redis(...)` and BullMQ's `connection` option.
  */
 export function redisConnection(config: Pick<ConfigService, 'get'>): RedisConnection {
   const url = config.get<string>('REDIS_URL');
@@ -18,5 +28,15 @@ export function redisConnection(config: Pick<ConfigService, 'get'>): RedisConnec
       'REDIS_URL is not set. Provide a Redis connection URL (e.g. an Upstash rediss:// endpoint).',
     );
   }
-  return { url };
+  const parsed = new URL(url);
+  if (parsed.protocol !== 'redis:' && parsed.protocol !== 'rediss:') {
+    throw new Error(`REDIS_URL must use redis:// or rediss://, got "${parsed.protocol}//"`);
+  }
+  return {
+    host: parsed.hostname,
+    port: parsed.port ? Number(parsed.port) : 6379,
+    username: parsed.username || undefined,
+    password: parsed.password || undefined,
+    tls: parsed.protocol === 'rediss:' ? {} : undefined,
+  };
 }
