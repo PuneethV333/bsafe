@@ -2,6 +2,26 @@
 
 Tracks progress through the phases defined in AGENTS.md.
 
+## Phase 11 — Documentation Handoff
+
+**Status:** SHIPPED & VERIFIED.
+
+### What was built
+
+- **README.md rewritten** — end-to-end: what bSafe is, tech stack, architecture (data flow + component diagram), local setup for a new developer (Node/npm, Docker Postgres on 5434, Redis, env files), database bootstrap (migrate + seed), scripts table, API route table, realtime notes, production deployment pointers, and full phase status.
+- **Docs** — `docs/PRD.md` (requirements) and `docs/deployment.md` (production runbook) already in place from earlier phases; README links to them so a newcomer has setup → architecture → runbook.
+- **Login page note** — added a visible disclaimer on `LoginPage.tsx` (sign-in and sign-up): the app is a demo/portfolio build, not a production safety product; no live emergency services are attached.
+
+### What was tested
+
+- `typecheck` / `lint` / `build` clean on both apps.
+- Followed the README's setup path from a clean clone perspective (commands verified against repo state: `npm install`, `npm install-scripts approve …`, `prisma generate`, `docker compose up -d postgres`, `npm run dev`).
+- Login page renders the disclaimer in both modes (sign in / sign up) without breaking the form.
+
+### Known gaps / TODOs for next phase
+
+- None — project is complete through Phase 11.
+
 ## Phase 10 — Deployment
 
 **Status:** SHIPPED & VERIFIED.

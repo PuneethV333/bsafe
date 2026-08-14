@@ -37,6 +37,11 @@ export function LoginPage() {
           <p className="mt-1 text-sm text-slate-400">Silent SOS emergency web app</p>
         </div>
 
+        <p className="rounded-lg border border-slate-700 bg-slate-900/60 p-3 text-center text-xs text-slate-400">
+          Demo build — this is <span className="font-semibold text-slate-300">not a working product</span> and is
+          for personal/portfolio use only. It is not connected to any emergency services.
+        </p>
+
         {!configured ? (
           <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">
             Firebase is not configured. Set <code>VITE_FIREBASE_*</code> env vars to enable
