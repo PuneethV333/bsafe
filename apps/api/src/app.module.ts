@@ -14,6 +14,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { RedisThrottlerStorage } from './redis/redis-throttler.storage';
 import { RedisService } from './redis/redis.service';
+import { TrackingModule } from './tracking/tracking.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -27,6 +28,7 @@ import { UsersModule } from './users/users.module';
     ContactsModule,
     AlertsModule,
     NotificationsModule,
+    TrackingModule,
     ThrottlerModule.forRootAsync({
       inject: [RedisService],
       useFactory: (redis: RedisService) => ({

@@ -14,8 +14,10 @@
   "dependencies": {
     "@bsafe/shared-types": "^0.1.0",
     "@tanstack/react-query": "^5.101.4",
+    "@types/leaflet": "^1.9.22",
     "axios": "^1.19.0",
     "firebase": "^12.17.1",
+    "leaflet": "^1.9.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.18.2",

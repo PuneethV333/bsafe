@@ -4,11 +4,13 @@ import { ContactsPage } from './pages/ContactsPage';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { TrackAlertPage } from './pages/TrackAlertPage';
 
 function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/track/:token" element={<TrackAlertPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/contacts" element={<ContactsPage />} />

@@ -2,6 +2,42 @@
 
 Tracks progress through the phases defined in AGENTS.md.
 
+## Phase 7 — Alert Status Tracking & Contact View
+
+**Status:** SHIPPED & VERIFIED — commit pending.
+
+### What was built
+
+- **API — tracking module** (`apps/api/src/tracking/`):
+  - `GET /tracking/:token` — public, 20/min per IP. Returns the alert's status, the triggerer's name, `triggeredAt`/`resolvedAt`, and the last known location. Unguessable UUID token; payload is view-only (no alert IDs of others, no contact/phone data).
+  - `POST /tracking/:token/acknowledge` — public, 10/min per IP. Moves `sent → acknowledged` (400 if already acknowledged or resolved) and logs `acknowledged` by actor `contact`.
+  - Both `@Public()` — the global Firebase guard skips them, so the throttler tracks per-IP (unauthenticated).
+  - A resolved alert still resolves the link but returns its final state — the "expiry" behavior: the live map stops updating and the page shows the resolved state.
+  - `activity_logs` now records `triggered → acknowledged → resolved` for the full contact-driven lifecycle.
+- **Web**:
+  - Public route `/track/:token` (`TrackAlertPage`) — mobile-first dark theme: status badge (ACTIVE / ACKNOWLEDGED / RESOLVED), "who triggered at when", a live Leaflet map (OpenStreetMap tiles, pulsing div-icon pin, no asset-path issues), timestamps, and an **Acknowledge** button shown only while `sent`.
+  - `LiveMap.tsx` — Leaflet wrapper (create-once, recenter + marker update on location change, cleanup on unmount).
+  - `lib/tracking.ts` — `useTracking` polls every 12s and stops once resolved; `useAcknowledgeTracking` mutation.
+- Deps: `leaflet` + `@types/leaflet` in `apps/web`.
+
+### What was tested
+
+- `typecheck` / `lint` / `build` clean on both apps (web shows only the usual >500 kB chunk warning from bundling Leaflet — code-split candidate for Phase 9).
+- Service probe (compiled app, real Postgres + Redis): view → `sent` with userName/triggeredAt and no location; `addLocation` → lastLocation reflected; acknowledge → `acknowledged`; re-acknowledge → 400; resolve → `resolvedAt` set; acknowledge-after-resolve → 400; bad token → 404; activity events exactly `triggered,acknowledged,resolved`.
+- Boot smoke over HTTP (no auth header): public `GET /api/tracking/:token` → 200 with correct payload; acknowledge → 200 then status `acknowledged`; invalid token → 404; acknowledge on a resolved alert → 400; per-IP throttle kicks in (~20/min → 429 on continued requests).
+
+### Notes
+
+- "Expires when resolved" is implemented as *stops live-updating and shows the resolved state* rather than returning 410 — a contact who opens an old SMS later still sees the outcome (resolved + timestamp), which is the safer UX.
+- The acknowledge actor is a generic `contact` (no identity on a public page). Phase 8's admin view can see the transition timeline.
+- Tracking page polls REST (12s) — Socket.IO is auth-gated to the owner, so contacts get near-real-time via polling instead.
+
+### Known gaps / TODOs for next phase
+
+- Phase 8 (optional): admin dashboard — cross-user alert table, delivery/ack/resolution KPIs; the `/notifications/:alertId/retry` route becomes admin-gated then.
+- Code-split Leaflet (dynamic import) to slim the web bundle.
+- The owner's own UI does not yet surface per-contact delivery status — a small status list on the alert screen (Phase 9 polish).
+
 ## Phase 6 — Notifications (Twilio SMS + SendGrid email via BullMQ)
 
 **Status:** SHIPPED & VERIFIED — commit pending.

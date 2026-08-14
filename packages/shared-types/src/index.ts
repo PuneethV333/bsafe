@@ -67,3 +67,14 @@ export interface NotificationDeliveryDto {
   sentAt?: string | null;
   createdAt: string;
 }
+
+/** Public, tokenized tracking view (what a contact sees at /track/:token). */
+export interface AlertTrackingDto {
+  id: string;
+  status: AlertStatus;
+  userName: string;
+  triggeredAt: string;
+  resolvedAt?: string | null;
+  lastLocation?: AlertLocationDto | null;
+  locationCount: number;
+}
