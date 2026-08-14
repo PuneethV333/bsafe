@@ -11,6 +11,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly config: ConfigService) {}
 
   async onModuleInit() {
+    const rawUrl = this.config.get<string>('REDIS_URL') ?? '';
+    const sanitized = rawUrl.replace(/:([^:@/]+)@/, ':****@');
+    this.logger.log(`REDIS_URL env = "${sanitized}"`);
     this.client = new Redis({
       ...redisConnection(this.config),
       lazyConnect: false,
