@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   createUserWithEmailAndPassword,
+  GoogleAuthProvider,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut as fbSignOut,
   type User as FirebaseUser,
 } from 'firebase/auth';
@@ -55,6 +57,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await createUserWithEmailAndPassword(auth, email, password);
   }, []);
 
+  const signInWithGoogle = useCallback(async () => {
+    if (!auth) throw new Error('Firebase is not configured.');
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+  }, []);
+
   const signOut = useCallback(async () => {
     if (!auth) return;
     await fbSignOut(auth);
@@ -67,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     configured: auth !== null,
     signIn,
     signUp,
+    signInWithGoogle,
     signOut,
   };
 
