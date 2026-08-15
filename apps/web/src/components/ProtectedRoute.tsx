@@ -2,9 +2,9 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../lib/useAuth';
 
 export function ProtectedRoute() {
-  const { user, initializing } = useAuth();
+  const { user, initializing, syncing } = useAuth();
 
-  if (initializing) {
+  if (initializing || syncing) {
     return <div className="min-h-screen bg-slate-950" />;
   }
   return user ? <Outlet /> : <Navigate to="/login" replace />;

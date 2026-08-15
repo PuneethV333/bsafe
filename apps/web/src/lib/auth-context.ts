@@ -4,6 +4,7 @@ import type { User as FirebaseUser } from 'firebase/auth';
 export interface AuthContextValue {
   user: FirebaseUser | null;
   initializing: boolean;
+  syncing: boolean;
   configured: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;

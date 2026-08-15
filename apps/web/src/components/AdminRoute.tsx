@@ -4,10 +4,10 @@ import { useProfile } from '../lib/users';
 
 /** Protected + admin-gated route. Non-admins get a 403-style screen. */
 export function AdminRoute() {
-  const { user, initializing } = useAuth();
+  const { user, initializing, syncing } = useAuth();
   const profile = useProfile();
 
-  if (initializing) return <div className="min-h-screen bg-slate-950" />;
+  if (initializing || syncing) return <div className="min-h-screen bg-slate-950" />;
   if (!user) return <Navigate to="/login" replace />;
   if (profile.isLoading) return <div className="min-h-screen bg-slate-950" />;
   if (!profile.data?.isAdmin) {
