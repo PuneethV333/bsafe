@@ -1,18 +1,8 @@
 import { useState } from 'react';
 import type { AlertStatus } from '@bsafe/shared-types';
 import { useAdminAlerts, useAdminReports, useRetryAlert } from '../../lib/admin';
-
-const STATUS_STYLES: Record<AlertStatus, string> = {
-  sent: 'bg-red-600 text-white',
-  acknowledged: 'bg-amber-500 text-slate-900',
-  resolved: 'bg-slate-700 text-slate-200',
-};
-
-const STATUS_LABELS: Record<AlertStatus, string> = {
-  sent: 'ACTIVE',
-  acknowledged: 'ACKNOWLEDGED',
-  resolved: 'RESOLVED',
-};
+import { StatusPill } from '../../components/StatusPill';
+import { ShieldIcon } from '../../components/icons';
 
 function fmt(iso?: string | null): string {
   if (!iso) return '—';
@@ -33,8 +23,11 @@ export function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="flex items-center justify-between border-b border-slate-800 p-4">
-        <span className="text-lg font-bold text-red-500">bSafe</span>
+      <header className="flex items-center justify-between gap-3 border-b border-slate-800 p-4">
+        <span className="flex items-center gap-2 text-lg font-bold text-red-500">
+          <ShieldIcon className="h-5 w-5" />
+          bSafe
+        </span>
         <h1 className="text-sm font-semibold uppercase tracking-widest text-slate-400">Admin</h1>
       </header>
 
@@ -49,31 +42,45 @@ export function AdminDashboard() {
 
         <section className="mt-4 rounded-xl border border-slate-800 bg-slate-900 p-4">
           <h2 className="text-sm font-semibold text-slate-300">Alerts per day (last 30 days)</h2>
-          <div className="mt-3 flex h-24 items-end gap-1">
+          <div
+            role="img"
+            aria-label="Bar chart of alerts per day over the last 30 days"
+            className="mt-3 flex h-24 items-end gap-1"
+          >
             {(reports.data?.alertsPerDay ?? []).map((d) => (
               <div
                 key={d.day}
-                title={`${d.day}: ${d.count}`}
-                className="flex-1 rounded-t bg-red-600/70"
-                style={{ height: `${Math.max(4, Math.round((d.count / maxDay) * 100))}%` }}
-              />
+                title={`${d.day}: ${d.count} alert${d.count === 1 ? '' : 's'}`}
+                className="flex flex-1 flex-col justify-end"
+              >
+                <div
+                  className="min-h-[4px] rounded-t bg-red-600/70 transition-[height] duration-300"
+                  style={{ height: `${Math.max(4, Math.round((d.count / maxDay) * 100))}%` }}
+                />
+              </div>
             ))}
           </div>
+          {reports.data && reports.data.alertsPerDay.length === 0 && (
+            <p className="mt-3 text-xs text-slate-500">No alerts recorded yet.</p>
+          )}
         </section>
 
         <section className="mt-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-300">Alerts</h2>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as '' | AlertStatus)}
-              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200"
-            >
-              <option value="">All statuses</option>
-              <option value="sent">Active</option>
-              <option value="acknowledged">Acknowledged</option>
-              <option value="resolved">Resolved</option>
-            </select>
+            <label className="flex items-center gap-2 text-xs text-slate-400">
+              <span>Status</span>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as '' | AlertStatus)}
+                className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200 outline-none transition-colors focus:border-red-500"
+              >
+                <option value="">All statuses</option>
+                <option value="sent">Active</option>
+                <option value="acknowledged">Acknowledged</option>
+                <option value="resolved">Resolved</option>
+              </select>
+            </label>
           </div>
 
           <div className="mt-3 overflow-x-auto rounded-xl border border-slate-800">
@@ -94,9 +101,7 @@ export function AdminDashboard() {
                 {alerts.data?.map((a) => (
                   <tr key={a.id} className="bg-slate-950/50 hover:bg-slate-900">
                     <td className="px-4 py-3">
-                      <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_STYLES[a.status]}`}>
-                        {STATUS_LABELS[a.status]}
-                      </span>
+                      <StatusPill status={a.status} />
                     </td>
                     <td className="px-4 py-3">
                       <div className="text-slate-200">{a.userName}</div>
@@ -159,7 +164,7 @@ function RetryButton({ alertId }: { alertId: string }) {
     <button
       onClick={() => retry.mutate()}
       disabled={retry.isPending}
-      className="rounded-lg border border-red-700 px-2.5 py-1 text-xs font-medium text-red-400 hover:bg-red-950 disabled:opacity-60"
+      className="rounded-lg border border-red-700 px-2.5 py-1 text-xs font-medium text-red-400 transition-colors hover:bg-red-950 disabled:opacity-60"
     >
       {retry.isPending ? '…' : retry.isSuccess ? `Requeued ${retry.data.requeued}` : 'Retry'}
     </button>

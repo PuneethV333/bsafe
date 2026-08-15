@@ -1,5 +1,6 @@
 import { FormEvent, useState } from 'react';
 import type { UserDto } from '@bsafe/shared-types';
+import { UserIcon } from '../components/icons';
 import { useProfile, useUpdateProfile } from '../lib/users';
 
 function ProfileForm({ profile, disabled }: { profile: UserDto; disabled: boolean }) {
@@ -65,7 +66,7 @@ function ProfileForm({ profile, disabled }: { profile: UserDto; disabled: boolea
       <button
         type="submit"
         disabled={disabled || updateProfile.isPending}
-        className="w-full rounded-lg bg-red-600 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+        className="w-full min-h-11 rounded-lg bg-red-600 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-500 disabled:opacity-50"
       >
         {updateProfile.isPending ? 'Saving…' : 'Save changes'}
       </button>
@@ -77,8 +78,11 @@ export function ProfilePage() {
   const profile = useProfile();
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6 text-slate-100">
-      <h1 className="text-2xl font-bold text-red-500">Profile</h1>
+    <div className="min-h-screen bg-slate-950 p-4 text-slate-100 sm:p-6">
+      <h1 className="flex items-center gap-2 text-2xl font-bold text-red-500">
+        <UserIcon className="h-6 w-6" />
+        Profile
+      </h1>
       {profile.isPending ? (
         <p className="mt-6 text-sm text-slate-400">Loading profile…</p>
       ) : profile.data ? (

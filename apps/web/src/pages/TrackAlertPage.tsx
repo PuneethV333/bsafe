@@ -1,19 +1,8 @@
 import { useParams } from 'react-router-dom';
-import type { AlertStatus } from '@bsafe/shared-types';
 import { LiveMap } from '../components/LiveMap';
+import { StatusPill } from '../components/StatusPill';
+import { AlertTriangleIcon, MapPinIcon } from '../components/icons';
 import { useAcknowledgeTracking, useTracking } from '../lib/tracking';
-
-const STATUS_STYLES: Record<AlertStatus, string> = {
-  sent: 'bg-red-600 text-white',
-  acknowledged: 'bg-amber-500 text-slate-900',
-  resolved: 'bg-slate-700 text-slate-200',
-};
-
-const STATUS_LABELS: Record<AlertStatus, string> = {
-  sent: 'ACTIVE',
-  acknowledged: 'ACKNOWLEDGED',
-  resolved: 'RESOLVED',
-};
 
 function formatTime(iso: string): string {
   const date = new Date(iso);
@@ -28,7 +17,8 @@ export function TrackAlertPage() {
   if (tracking.isError) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 p-6 text-center text-slate-100">
-        <h1 className="text-xl font-semibold text-slate-200">Tracking link unavailable</h1>
+        <AlertTriangleIcon className="h-8 w-8 text-red-500" />
+        <h1 className="mt-3 text-xl font-semibold text-slate-200">Tracking link unavailable</h1>
         <p className="mt-2 max-w-sm text-sm text-slate-400">
           This link is invalid or expired, or the server could not be reached.
         </p>
@@ -40,7 +30,10 @@ export function TrackAlertPage() {
   if (!data) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-400">
-        Loading…
+        <div className="flex items-center gap-2">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-600 border-t-red-500" />
+          Loading…
+        </div>
       </div>
     );
   }
@@ -56,9 +49,7 @@ export function TrackAlertPage() {
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <header className="flex items-center justify-between border-b border-slate-800 p-4">
         <span className="text-lg font-bold text-red-500">bSafe</span>
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold tracking-widest ${STATUS_STYLES[data.status]}`}>
-          {STATUS_LABELS[data.status]}
-        </span>
+        <StatusPill status={data.status} />
       </header>
 
       <main className="mx-auto max-w-md p-4">
@@ -78,7 +69,8 @@ export function TrackAlertPage() {
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center bg-slate-900 text-center text-slate-500">
-              <p className="text-sm">No location yet</p>
+              <MapPinIcon className="h-6 w-6 text-slate-600" />
+              <p className="mt-2 text-sm">No location yet</p>
               <p className="mt-1 text-xs">Waiting for a GPS fix to come through…</p>
             </div>
           )}
@@ -115,7 +107,7 @@ export function TrackAlertPage() {
               <button
                 onClick={handleAcknowledge}
                 disabled={acknowledge.isPending}
-                className="mt-4 w-full rounded-lg bg-red-600 px-4 py-3 font-semibold text-white transition hover:bg-red-500 disabled:opacity-60"
+                className="mt-4 w-full min-h-12 rounded-lg bg-red-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-red-500 disabled:opacity-60"
               >
                 {acknowledge.isPending ? 'Acknowledging…' : 'I’m aware — acknowledge'}
               </button>

@@ -16,6 +16,7 @@ import {
 } from '../lib/alerts';
 import { auth } from '../lib/firebase';
 import { SosButton } from './SosButton';
+import { AlertTriangleIcon, MapPinIcon, PlusIcon, UsersIcon } from './icons';
 
 const LOCATION_INTERVAL_MS = 12_000;
 const ACTIVE_ALERT_KEY = 'bsafe.activeAlertId';
@@ -155,14 +156,17 @@ export function SosPanel() {
 
   if (count === 0) {
     return (
-      <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900 p-6">
-        <p className="text-sm text-amber-300">
+      <div className="mt-4 rounded-xl border border-dashed border-slate-700 p-8 text-center">
+        <UsersIcon className="mx-auto h-8 w-8 text-slate-600" />
+        <p className="mt-3 flex items-center justify-center gap-1.5 text-sm font-medium text-amber-300">
+          <AlertTriangleIcon className="h-4 w-4" />
           SOS is disabled — you need at least one emergency contact.
         </p>
         <a
           href="/contacts"
-          className="mt-3 inline-block rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+          className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-500"
         >
+          <PlusIcon className="h-4 w-4" />
           Add an emergency contact
         </a>
       </div>
@@ -172,29 +176,36 @@ export function SosPanel() {
   return (
     <div className="mt-4 space-y-4 rounded-xl border border-slate-800 bg-slate-900 p-6">
       {/* Location onboarding — permission requested here, not at the crisis moment. */}
-      <div className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950 px-4 py-3">
-        <div>
-          <p className="text-sm font-medium text-slate-200">
-            {geo.status === 'granted'
-              ? 'Live location on'
-              : geo.status === 'denied' || geo.status === 'unsupported'
-                ? 'Location unavailable'
-                : 'Enable location during setup'}
-          </p>
-          <p className="text-xs text-slate-400">
-            {geo.status === 'denied'
-              ? 'SOS will share only your last known position.'
-              : geo.status === 'unavailable'
-                ? 'GPS unavailable right now — using last known position.'
-              : geo.status === 'granted'
-                ? 'Trusted contacts will see your live position during an alert.'
-                : 'Requested up-front so SOS works instantly in an emergency.'}
-          </p>
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950 px-4 py-3">
+        <div className="flex items-start gap-3">
+          <MapPinIcon
+            className={`mt-0.5 h-5 w-5 shrink-0 ${
+              geo.status === 'granted' ? 'text-emerald-400' : 'text-slate-500'
+            }`}
+          />
+          <div>
+            <p className="text-sm font-medium text-slate-200">
+              {geo.status === 'granted'
+                ? 'Live location on'
+                : geo.status === 'denied' || geo.status === 'unsupported'
+                  ? 'Location unavailable'
+                  : 'Enable location during setup'}
+            </p>
+            <p className="text-xs text-slate-400">
+              {geo.status === 'denied'
+                ? 'SOS will share only your last known position.'
+                : geo.status === 'unavailable'
+                  ? 'GPS unavailable right now — using last known position.'
+                : geo.status === 'granted'
+                  ? 'Trusted contacts will see your live position during an alert.'
+                  : 'Requested up-front so SOS works instantly in an emergency.'}
+            </p>
+          </div>
         </div>
         {(geo.status === 'idle' || geo.status === 'prompting') && (
           <button
             onClick={() => geo.requestPermission()}
-            className="shrink-0 rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:border-slate-500"
+            className="shrink-0 rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-200 transition-colors hover:border-slate-500"
           >
             Enable
           </button>
