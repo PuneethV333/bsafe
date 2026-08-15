@@ -10,9 +10,9 @@ interface LiveMapProps {
 
 const pinIcon = L.divIcon({
   className: '',
-  html: '<div style="width:16px;height:16px;border-radius:50%;background:#dc2626;border:3px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.5)"></div>',
-  iconSize: [16, 16],
-  iconAnchor: [8, 8],
+  html: '<div style="width:18px;height:18px;border-radius:50%;background:#e12d4a;border:3px solid #eef1f8;box-shadow:0 0 0 6px rgba(225,45,74,0.25),0 2px 8px rgba(0,0,0,.6)"></div>',
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
 });
 
 export function LiveMap({ latitude, longitude, label }: LiveMapProps) {
@@ -25,10 +25,12 @@ export function LiveMap({ latitude, longitude, label }: LiveMapProps) {
     if (!container) return;
 
     if (!mapRef.current) {
-      const map = L.map(container);
+      const map = L.map(container, { attributionControl: true });
       map.setView([latitude, longitude], 15);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
+      // Dark basemap keeps the night palette; CARTO tiles are free with attribution.
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
         maxZoom: 19,
       }).addTo(map);
       mapRef.current = map;

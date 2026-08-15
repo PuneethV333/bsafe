@@ -17,8 +17,7 @@ function errMessage(e: unknown): string {
   return Array.isArray(m) ? m.join(', ') : (m ?? 'Request failed.');
 }
 
-const inputClass =
-  'mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm outline-none transition-colors placeholder:text-slate-500 focus:border-red-500';
+const PHONE_RE = /^\+[1-9]\d{7,14}$/;
 
 function LabeledInput({ id, label, ...rest }: {
   id: string;
@@ -26,10 +25,10 @@ function LabeledInput({ id, label, ...rest }: {
 } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div>
-      <label htmlFor={id} className="block text-xs font-medium uppercase tracking-wide text-slate-400">
+      <label htmlFor={id} className="field-label">
         {label}
       </label>
-      <input id={id} className={inputClass} {...rest} />
+      <input id={id} className="field-input" {...rest} />
     </div>
   );
 }
@@ -44,23 +43,33 @@ function ContactForm({ initial, onSubmit, submitLabel, mutating }: {
   const [phone, setPhone] = useState(initial?.phone ?? '');
   const [email, setEmail] = useState(initial?.email ?? '');
   const [relationship, setRelationship] = useState(initial?.relationship ?? '');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
+    const trimmedPhone = phone.trim();
+    if (trimmedPhone && !PHONE_RE.test(trimmedPhone)) {
+      setPhoneError('Phone must include country code, e.g. +919876543210');
+      return;
+    }
+    setPhoneError(null);
     onSubmit({
       name,
-      phone: phone.trim() || undefined,
+      phone: trimmedPhone || undefined,
       email: email.trim() || undefined,
       relationship: relationship.trim() || undefined,
     });
   };
 
   return (
-    <form onSubmit={submit} className="space-y-3">
+    <form onSubmit={submit} className="space-y-4">
       <LabeledInput id="contact-name" label="Name" required maxLength={120} value={name}
         onChange={(e) => setName(e.target.value)} />
-      <LabeledInput id="contact-phone" label="Phone" placeholder="e.g. +14155550123" value={phone}
-        onChange={(e) => setPhone(e.target.value)} />
+      <LabeledInput id="contact-phone" label="Phone" placeholder="+14155550123" value={phone}
+        onChange={(e) => { setPhone(e.target.value); setPhoneError(null); }} />
+      {phoneError && (
+        <p role="alert" className="text-xs text-signal-soft">{phoneError}</p>
+      )}
       <LabeledInput id="contact-email" label="Email" type="email" value={email}
         onChange={(e) => setEmail(e.target.value)} />
       <LabeledInput id="contact-relationship" label="Relationship (optional)" maxLength={80} value={relationship}
@@ -68,7 +77,7 @@ function ContactForm({ initial, onSubmit, submitLabel, mutating }: {
       <button
         type="submit"
         disabled={mutating}
-        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-red-600 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-500 disabled:opacity-50"
+        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-signal py-2 text-sm font-semibold text-white transition-colors hover:bg-signal-bright disabled:opacity-50"
       >
         <PlusIcon className="h-4 w-4" />
         {submitLabel}
@@ -104,17 +113,31 @@ export function ContactsPage() {
   const count = contacts?.length ?? 0;
 
   return (
-    <div className="min-h-screen bg-slate-950 p-4 text-slate-100 sm:p-6">
-      <h1 className="flex items-center gap-2 text-2xl font-bold text-red-500">
-        <UsersIcon className="h-6 w-6" />
-        Emergency contacts
-      </h1>
-      <p className="mt-1 text-sm text-slate-400">
-        {count}/{MAX_CONTACTS}. At least one contact is required before SOS is enabled.
-      </p>
+    <div className="mx-auto max-w-5xl animate-rise text-chalk">
+      <header>
+        <p className="eyebrow">Your people</p>
+        <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight">Emergency contacts</h1>
+        <p className="mt-2 text-sm text-mist">
+          At least one contact is required before SOS is enabled.
+        </p>
+
+        <div className="mt-4 flex items-center gap-3">
+          <div className="flex gap-1.5" aria-hidden>
+            {Array.from({ length: MAX_CONTACTS }, (_, i) => (
+              <span
+                key={i}
+                className={`h-1.5 w-8 rounded-full ${i < count ? 'bg-safe' : 'bg-line'}`}
+              />
+            ))}
+          </div>
+          <span className="font-mono text-xs text-mist">
+            {count}/{MAX_CONTACTS} SLOTS
+          </span>
+        </div>
+      </header>
 
       {error && (
-        <p role="alert" className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
+        <p role="alert" className="mt-4 rounded-xl border border-signal/40 bg-signal/10 p-3 text-sm text-signal-soft">
           {error}
         </p>
       )}
@@ -122,48 +145,57 @@ export function ContactsPage() {
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
         <section>
           {isPending ? (
-            <p className="text-sm text-slate-400">Loading contacts…</p>
+            <p className="text-sm text-mist">Loading contacts…</p>
           ) : isError ? (
-            <p className="text-sm text-red-400">Could not load contacts.</p>
+            <p className="text-sm text-signal-soft">Could not load contacts.</p>
           ) : contacts.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-700 p-8 text-center">
-              <UsersIcon className="mx-auto h-8 w-8 text-slate-600" />
-              <p className="mt-3 text-sm font-medium text-slate-300">No contacts yet</p>
-              <p className="mt-1 text-sm text-slate-500">
-                Add your first emergency contact on the right to enable SOS.
+            <div className="rounded-2xl border border-dashed border-line bg-panel/60 p-10 text-center">
+              <UsersIcon className="mx-auto h-8 w-8 text-faint" />
+              <p className="mt-3 text-sm font-medium text-chalk">No contacts yet</p>
+              <p className="mt-1 text-sm text-mist">
+                Add your first emergency contact to enable SOS.
               </p>
             </div>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-3">
               {contacts.map((c) => (
                 <li
                   key={c.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4 transition-colors hover:border-slate-700"
+                  className={`flex items-center justify-between gap-4 rounded-2xl border p-4 transition-colors ${
+                    editingId === c.id
+                      ? 'border-signal/50 bg-signal/5'
+                      : 'border-line bg-panel hover:border-line-bright'
+                  }`}
                 >
-                  <div className="min-w-0">
-                    <p className="font-semibold">{c.name}</p>
-                    <p className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-400">
-                      {c.phone && (
-                        <span className="inline-flex items-center gap-1">
-                          <PhoneIcon className="h-3 w-3 text-slate-500" />
-                          {c.phone}
-                        </span>
-                      )}
-                      {c.email && (
-                        <span className="inline-flex items-center gap-1">
-                          <MailIcon className="h-3 w-3 text-slate-500" />
-                          {c.email}
-                        </span>
-                      )}
-                      {c.relationship && (
-                        <span className="text-slate-500">{c.relationship}</span>
-                      )}
-                    </p>
+                  <div className="flex min-w-0 items-center gap-3.5">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line bg-raised font-display text-base font-semibold text-mist">
+                      {c.name.slice(0, 1).toUpperCase()}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-chalk">{c.name}</p>
+                      <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] text-mist">
+                        {c.phone && (
+                          <span className="inline-flex items-center gap-1">
+                            <PhoneIcon className="h-3 w-3 text-faint" />
+                            {c.phone}
+                          </span>
+                        )}
+                        {c.email && (
+                          <span className="inline-flex items-center gap-1 truncate">
+                            <MailIcon className="h-3 w-3 shrink-0 text-faint" />
+                            {c.email}
+                          </span>
+                        )}
+                        {c.relationship && (
+                          <span className="text-faint">{c.relationship}</span>
+                        )}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex shrink-0 gap-2 text-sm">
+                  <div className="flex shrink-0 gap-2">
                     <button
                       onClick={() => setEditingId(editingId === c.id ? null : c.id)}
-                      className="flex min-h-11 items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-2 transition-colors hover:border-red-500 hover:text-red-400"
+                      className="flex min-h-11 items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-xs font-medium text-mist transition-colors hover:border-line-bright hover:text-chalk"
                     >
                       <PencilIcon className="h-3.5 w-3.5" />
                       {editingId === c.id ? 'Cancel' : 'Edit'}
@@ -175,7 +207,7 @@ export function ContactsPage() {
                           await deleteContact.mutateAsync(c.id);
                         })
                       }
-                      className="flex min-h-11 items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-2 text-red-400 transition-colors hover:border-red-500 disabled:opacity-60"
+                      className="flex min-h-11 items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-xs font-medium text-signal-soft transition-colors hover:border-signal/60 hover:bg-signal/10 disabled:opacity-60"
                     >
                       <TrashIcon className="h-3.5 w-3.5" />
                       Remove
@@ -187,10 +219,12 @@ export function ContactsPage() {
           )}
         </section>
 
-        <aside className="h-fit rounded-xl border border-slate-800 bg-slate-900 p-4">
+        <aside className="h-fit rounded-2xl border border-line bg-panel p-5 lg:sticky lg:top-6">
           {editing ? (
             <>
-              <h2 className="mb-3 text-lg font-semibold">Edit {editing.name}</h2>
+              <h2 className="mb-4 font-display text-lg font-semibold text-chalk">
+                Edit {editing.name}
+              </h2>
               <ContactForm
                 initial={editing}
                 mutating={mutating}
@@ -204,9 +238,11 @@ export function ContactsPage() {
             </>
           ) : (
             <>
-              <h2 className="mb-3 text-lg font-semibold">Add a contact</h2>
+              <h2 className="mb-4 font-display text-lg font-semibold text-chalk">Add a contact</h2>
               {count >= MAX_CONTACTS ? (
-                <p className="text-sm text-amber-300">You&apos;ve reached the 5-contact limit.</p>
+                <p className="text-sm leading-relaxed text-caution">
+                  You&apos;ve reached the 5-contact limit. Remove one to add another.
+                </p>
               ) : (
                 <ContactForm
                   mutating={mutating}

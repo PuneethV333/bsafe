@@ -7,14 +7,14 @@ export function AdminRoute() {
   const { user, initializing, syncing } = useAuth();
   const profile = useProfile();
 
-  if (initializing || syncing) return <div className="min-h-screen bg-slate-950" />;
+  if (initializing || syncing) return <div className="min-h-screen bg-night" />;
   if (!user) return <Navigate to="/login" replace />;
-  if (profile.isLoading) return <div className="min-h-screen bg-slate-950" />;
+  if (profile.isLoading) return <div className="min-h-screen bg-night" />;
   if (!profile.data?.isAdmin) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 p-6 text-center text-slate-100">
-        <h1 className="text-xl font-semibold text-slate-200">Admin access required</h1>
-        <p className="mt-2 text-sm text-slate-400">Your account is not an administrator.</p>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-night p-6 text-center text-chalk">
+        <h1 className="font-display text-xl font-semibold">Admin access required</h1>
+        <p className="mt-2 text-sm text-mist">Your account is not an administrator.</p>
       </div>
     );
   }

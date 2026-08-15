@@ -147,24 +147,24 @@ export function SosPanel() {
   const count = contacts.data?.length ?? 0;
 
   if (contacts.isError) {
-    return <p className="text-sm text-red-400">Could not load contacts.</p>;
+    return <p className="text-sm text-signal-soft">Could not load contacts.</p>;
   }
 
   if (contacts.isPending) {
-    return <p className="text-sm text-slate-400">Loading…</p>;
+    return <p className="text-sm text-mist">Loading…</p>;
   }
 
   if (count === 0) {
     return (
-      <div className="mt-4 rounded-xl border border-dashed border-slate-700 p-8 text-center">
-        <UsersIcon className="mx-auto h-8 w-8 text-slate-600" />
-        <p className="mt-3 flex items-center justify-center gap-1.5 text-sm font-medium text-amber-300">
-          <AlertTriangleIcon className="h-4 w-4" />
+      <div className="mt-6 rounded-2xl border border-dashed border-line bg-panel/60 p-10 text-center">
+        <UsersIcon className="mx-auto h-8 w-8 text-faint" />
+        <p className="mt-4 flex items-center justify-center gap-2 text-sm font-medium text-caution">
+          <AlertTriangleIcon className="h-4 w-4 shrink-0" />
           SOS is disabled — you need at least one emergency contact.
         </p>
         <a
           href="/contacts"
-          className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-500"
+          className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-signal px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-signal-bright"
         >
           <PlusIcon className="h-4 w-4" />
           Add an emergency contact
@@ -174,24 +174,24 @@ export function SosPanel() {
   }
 
   return (
-    <div className="mt-4 space-y-4 rounded-xl border border-slate-800 bg-slate-900 p-6">
+    <div className="mt-6 space-y-6">
       {/* Location onboarding — permission requested here, not at the crisis moment. */}
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950 px-4 py-3">
+      <div className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-panel px-4 py-3.5">
         <div className="flex items-start gap-3">
           <MapPinIcon
             className={`mt-0.5 h-5 w-5 shrink-0 ${
-              geo.status === 'granted' ? 'text-emerald-400' : 'text-slate-500'
+              geo.status === 'granted' ? 'text-safe' : 'text-faint'
             }`}
           />
           <div>
-            <p className="text-sm font-medium text-slate-200">
+            <p className="text-sm font-medium text-chalk">
               {geo.status === 'granted'
                 ? 'Live location on'
                 : geo.status === 'denied' || geo.status === 'unsupported'
                   ? 'Location unavailable'
                   : 'Enable location during setup'}
             </p>
-            <p className="text-xs text-slate-400">
+            <p className="mt-0.5 text-xs leading-relaxed text-mist">
               {geo.status === 'denied'
                 ? 'SOS will share only your last known position.'
                 : geo.status === 'unavailable'
@@ -205,14 +205,14 @@ export function SosPanel() {
         {(geo.status === 'idle' || geo.status === 'prompting') && (
           <button
             onClick={() => geo.requestPermission()}
-            className="shrink-0 rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-200 transition-colors hover:border-slate-500"
+            className="shrink-0 rounded-lg border border-line-bright px-3 py-1.5 font-mono text-xs font-medium text-chalk transition-colors hover:border-safe/60 hover:text-safe-soft"
           >
             Enable
           </button>
         )}
       </div>
 
-      <div className="flex justify-center">
+      <div className="flex justify-center py-2">
         <SosButton
           onTrigger={handleTrigger}
           disabled={trigger.isPending}
@@ -221,19 +221,21 @@ export function SosPanel() {
       </div>
 
       {trigger.isPending && (
-        <p className="text-center text-xs text-slate-400">…</p>
+        <p className="text-center font-mono text-xs text-faint">…</p>
       )}
 
       {isActive && (
-        <div className="space-y-2 text-center">
-          <p className="text-xs uppercase tracking-widest text-red-400/80">SOS active</p>
+        <div className="space-y-1.5 text-center">
+          <p className="font-mono text-xs tracking-[0.22em] text-signal-soft/80">SOS ACTIVE</p>
           {alert?.locationCount !== undefined && (
-            <p className="text-xs text-slate-400">{alert.locationCount} location updates shared</p>
+            <p className="font-mono text-xs text-mist">
+              {alert.locationCount} location updates shared
+            </p>
           )}
           <button
             onClick={handleResolve}
             disabled={updateStatus.isPending}
-            className="text-xs text-slate-500 underline-offset-2 hover:text-slate-300 hover:underline"
+            className="text-xs text-faint underline-offset-4 transition-colors hover:text-mist hover:underline"
           >
             {updateStatus.isPending ? 'Resolving…' : 'Resolve alert'}
           </button>

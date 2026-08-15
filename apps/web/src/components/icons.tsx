@@ -143,3 +143,36 @@ export function ClockIcon(props: IconProps) {
     </svg>
   );
 }
+
+/** Sonar beacon — a dot answering with rings. Used as the "trigger" nav icon. */
+export function BeaconIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+      <path d="M16.2 16.2a6 6 0 0 0 0-8.4" />
+      <path d="M7.8 7.8a6 6 0 0 0 0 8.4" />
+      <path d="M19.1 19.1a10 10 0 0 0 0-14.2" />
+      <path d="M4.9 4.9a10 10 0 0 0 0 14.2" />
+    </svg>
+  );
+}
+
+/**
+ * The brand mark: SOS in Morse — three dots, three dashes, three dots.
+ * SOS began as a Morse distress signal; the glyph is the app's signature.
+ */
+export function SosMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 84 12" fill="currentColor" aria-hidden className={className}>
+      <circle cx="4" cy="6" r="2.4" />
+      <circle cx="11" cy="6" r="2.4" />
+      <circle cx="18" cy="6" r="2.4" />
+      <rect x="25.5" y="3.8" width="9" height="4.4" rx="2.2" />
+      <rect x="37.5" y="3.8" width="9" height="4.4" rx="2.2" />
+      <rect x="49.5" y="3.8" width="9" height="4.4" rx="2.2" />
+      <circle cx="66" cy="6" r="2.4" />
+      <circle cx="73" cy="6" r="2.4" />
+      <circle cx="80" cy="6" r="2.4" />
+    </svg>
+  );
+}

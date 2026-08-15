@@ -7,14 +7,18 @@ interface SosButtonProps {
   /** Fired on a single tap OR a 600ms long-press. */
   onTrigger: (type: TriggerType) => void;
   disabled?: boolean;
-  /** After an alert is live the only feedback is the button dimming — no sound, no modal. */
+  /** After an alert is live the only feedback is the dial dimming — no sound, no modal. */
   active?: boolean;
 }
 
+const TICKS = Array.from({ length: 60 }, (_, i) => i);
+
 /**
- * Silent SOS trigger. Supports both a single tap and a long-press (both fire
- * the same alert). Feedback is intentionally minimal: the button dims and the
- * ring fades. No sound, no modal, no success animation.
+ * Silent SOS trigger, drawn as a sonar dial: a tick ring, a breathing hairline
+ * while armed, and a solid signal core. Supports both a single tap and a
+ * long-press (both fire the same alert). Feedback is intentionally minimal:
+ * when an alert is live the whole dial dims and goes still. No sound, no modal,
+ * no success animation.
  */
 export function SosButton({ onTrigger, disabled = false, active = false }: SosButtonProps) {
   const suppressTap = useRef(false);
@@ -63,23 +67,76 @@ export function SosButton({ onTrigger, disabled = false, active = false }: SosBu
       }}
       disabled={disabled}
       className={[
-        'relative flex h-44 w-44 items-center justify-center rounded-full text-xl font-bold',
-        'outline-none focus-visible:ring-4 focus-visible:ring-red-500/50 select-none',
-        active
-          ? 'bg-red-900/60 text-red-200/70'
-          : disabled
-            ? 'cursor-not-allowed bg-slate-800 text-slate-500'
-            : 'bg-red-600 text-white shadow-[0_0_40px_rgba(239,68,68,0.35)] hover:bg-red-500',
+        'group relative flex h-60 w-60 select-none items-center justify-center rounded-full outline-none sm:h-72 sm:w-72',
+        'focus-visible:ring-4 focus-visible:ring-signal/40',
+        disabled && !active ? 'cursor-not-allowed' : '',
       ].join(' ')}
     >
+      {/* Instrument tick ring */}
+      <svg
+        aria-hidden
+        viewBox="0 0 100 100"
+        className={`absolute inset-0 h-full w-full ${active ? 'text-faint/30' : 'text-faint'}`}
+      >
+        {TICKS.map((i) => {
+          const major = i % 5 === 0;
+          const angle = (i * 6 * Math.PI) / 180;
+          const r1 = major ? 43 : 44.75;
+          const r2 = 48.5;
+          return (
+            <line
+              key={i}
+              x1={50 + r1 * Math.sin(angle)}
+              y1={50 - r1 * Math.cos(angle)}
+              x2={50 + r2 * Math.sin(angle)}
+              y2={50 - r2 * Math.cos(angle)}
+              stroke="currentColor"
+              strokeWidth={major ? 1 : 0.6}
+            />
+          );
+        })}
+      </svg>
+
+      {/* Breathing standby ring — goes still while an alert is live */}
       <span
         aria-hidden
         className={[
-          'absolute inset-0 rounded-full border-4',
-          active ? 'border-red-700/40' : 'border-red-400/30',
+          'absolute inset-[13%] rounded-full border',
+          active ? 'border-signal/15' : 'border-signal/35 animate-breathe',
         ].join(' ')}
       />
-      SOS
+
+      {/* Core */}
+      <span
+        aria-hidden
+        className={[
+          'absolute inset-[19%] rounded-full ring-1 ring-inset transition-all duration-200',
+          active
+            ? 'bg-signal-dim text-mist/50 ring-signal/20'
+            : disabled
+              ? 'bg-raised text-faint ring-line'
+              : 'bg-gradient-to-b from-signal-bright to-signal text-white ring-white/25 shadow-[0_18px_60px_-16px_rgba(225,45,74,0.6)] group-hover:shadow-[0_22px_70px_-14px_rgba(225,45,74,0.75)] group-active:scale-[0.98]',
+        ].join(' ')}
+      />
+
+      <span className="relative flex flex-col items-center gap-2">
+        <span
+          className={[
+            'font-display text-4xl font-bold tracking-[0.24em] pl-[0.24em] sm:text-5xl',
+            active ? 'text-mist/50' : disabled ? 'text-faint' : 'text-white',
+          ].join(' ')}
+        >
+          SOS
+        </span>
+        <span
+          className={[
+            'font-mono text-[10px] tracking-[0.24em]',
+            active ? 'text-mist/40' : disabled ? 'text-faint' : 'text-white/70',
+          ].join(' ')}
+        >
+          {active ? 'TRANSMITTING' : disabled ? 'STANDBY' : 'TAP · HOLD'}
+        </span>
+      </span>
     </button>
   );
 }

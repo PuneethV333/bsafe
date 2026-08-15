@@ -7,7 +7,7 @@ export class CreateContactDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^\+?[1-9]\d{6,14}$/, { message: 'phone must be a valid phone number' })
+  @Matches(/^\+[1-9]\d{7,14}$/, { message: 'phone must include country code, e.g. +919876543210' })
   phone?: string;
 
   @IsOptional()

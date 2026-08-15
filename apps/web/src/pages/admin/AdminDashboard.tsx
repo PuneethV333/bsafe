@@ -2,7 +2,6 @@ import { useState } from 'react';
 import type { AlertStatus } from '@bsafe/shared-types';
 import { useAdminAlerts, useAdminReports, useRetryAlert } from '../../lib/admin';
 import { StatusPill } from '../../components/StatusPill';
-import { ShieldIcon } from '../../components/icons';
 
 function fmt(iso?: string | null): string {
   if (!iso) return '—';
@@ -22,30 +21,36 @@ export function AdminDashboard() {
   const maxDay = Math.max(1, ...(reports.data?.alertsPerDay.map((d) => d.count) ?? [1]));
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="flex items-center justify-between gap-3 border-b border-slate-800 p-4">
-        <span className="flex items-center gap-2 text-lg font-bold text-red-500">
-          <ShieldIcon className="h-5 w-5" />
-          bSafe
-        </span>
-        <h1 className="text-sm font-semibold uppercase tracking-widest text-slate-400">Admin</h1>
+    <div className="mx-auto max-w-6xl animate-rise">
+      <header>
+        <p className="eyebrow">Operations · read only</p>
+        <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-chalk">
+          Alert overview
+        </h1>
       </header>
 
-      <main className="mx-auto max-w-6xl p-4">
-        <section className="grid grid-cols-2 gap-3 md:grid-cols-5">
+      <main className="mt-6">
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <Metric label="Total alerts" value={String(reports.data?.totals.alerts ?? '…')} />
-          <Metric label="Active (24h)" value={String(reports.data?.activeNow ?? '…')} />
+          <Metric
+            label="Active (24h)"
+            value={String(reports.data?.activeNow ?? '…')}
+            accent={Boolean(reports.data?.activeNow)}
+          />
           <Metric label="Ack rate" value={reports.data ? `${Math.round(reports.data.ackRate * 100)}%` : '…'} />
           <Metric label="Avg to ack" value={fmtMinutes(reports.data?.avgAcknowledgeMinutes)} />
           <Metric label="Avg to resolve" value={fmtMinutes(reports.data?.avgResolveMinutes)} />
         </section>
 
-        <section className="mt-4 rounded-xl border border-slate-800 bg-slate-900 p-4">
-          <h2 className="text-sm font-semibold text-slate-300">Alerts per day (last 30 days)</h2>
+        <section className="mt-4 rounded-2xl border border-line bg-panel p-5">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-sm font-medium text-chalk">Alerts per day</h2>
+            <span className="font-mono text-[11px] text-faint">LAST 30 DAYS</span>
+          </div>
           <div
             role="img"
             aria-label="Bar chart of alerts per day over the last 30 days"
-            className="mt-3 flex h-24 items-end gap-1"
+            className="mt-4 flex h-28 items-end gap-1 border-b border-line pb-px"
           >
             {(reports.data?.alertsPerDay ?? []).map((d) => (
               <div
@@ -54,26 +59,26 @@ export function AdminDashboard() {
                 className="flex flex-1 flex-col justify-end"
               >
                 <div
-                  className="min-h-[4px] rounded-t bg-red-600/70 transition-[height] duration-300"
+                  className="min-h-[4px] rounded-t-sm bg-gradient-to-t from-signal/40 to-signal/80 transition-[height] duration-300 hover:to-signal"
                   style={{ height: `${Math.max(4, Math.round((d.count / maxDay) * 100))}%` }}
                 />
               </div>
             ))}
           </div>
           {reports.data && reports.data.alertsPerDay.length === 0 && (
-            <p className="mt-3 text-xs text-slate-500">No alerts recorded yet.</p>
+            <p className="mt-3 font-mono text-xs text-faint">No alerts recorded yet.</p>
           )}
         </section>
 
-        <section className="mt-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-300">Alerts</h2>
-            <label className="flex items-center gap-2 text-xs text-slate-400">
-              <span>Status</span>
+        <section className="mt-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-sm font-medium text-chalk">All alerts</h2>
+            <label className="flex items-center gap-2 font-mono text-[11px] tracking-wider text-mist">
+              <span>STATUS</span>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as '' | AlertStatus)}
-                className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200 outline-none transition-colors focus:border-red-500"
+                className="rounded-lg border border-line bg-panel px-3 py-1.5 text-sm text-chalk outline-none transition-colors focus:border-signal"
               >
                 <option value="">All statuses</option>
                 <option value="sent">Active</option>
@@ -83,59 +88,59 @@ export function AdminDashboard() {
             </label>
           </div>
 
-          <div className="mt-3 overflow-x-auto rounded-xl border border-slate-800">
-            <table className="w-full min-w-[820px] text-left text-sm">
-              <thead className="bg-slate-900 text-xs uppercase tracking-wide text-slate-500">
+          <div className="mt-3 overflow-x-auto rounded-2xl border border-line">
+            <table className="w-full min-w-[860px] text-left text-sm">
+              <thead className="bg-raised/60 font-mono text-[11px] uppercase tracking-wider text-faint">
                 <tr>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">User</th>
-                  <th className="px-4 py-3">Triggered</th>
-                  <th className="px-4 py-3">Acknowledged</th>
-                  <th className="px-4 py-3">Resolved</th>
-                  <th className="px-4 py-3">Locs</th>
-                  <th className="px-4 py-3">Delivered</th>
-                  <th className="px-4 py-3">Retry</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">User</th>
+                  <th className="px-4 py-3 font-medium">Triggered</th>
+                  <th className="px-4 py-3 font-medium">Acknowledged</th>
+                  <th className="px-4 py-3 font-medium">Resolved</th>
+                  <th className="px-4 py-3 font-medium">Locs</th>
+                  <th className="px-4 py-3 font-medium">Delivered</th>
+                  <th className="px-4 py-3 font-medium">Retry</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-line/70">
                 {alerts.data?.map((a) => (
-                  <tr key={a.id} className="bg-slate-950/50 hover:bg-slate-900">
+                  <tr key={a.id} className="bg-panel transition-colors hover:bg-raised/50">
                     <td className="px-4 py-3">
                       <StatusPill status={a.status} />
                     </td>
                     <td className="px-4 py-3">
-                      <div className="text-slate-200">{a.userName}</div>
-                      {a.userEmail && <div className="text-xs text-slate-500">{a.userEmail}</div>}
+                      <div className="text-chalk">{a.userName}</div>
+                      {a.userEmail && <div className="font-mono text-[11px] text-faint">{a.userEmail}</div>}
                     </td>
-                    <td className="px-4 py-3 text-slate-300">{fmt(a.triggeredAt)}</td>
-                    <td className="px-4 py-3 text-slate-300">{fmt(a.acknowledgedAt)}</td>
-                    <td className="px-4 py-3 text-slate-300">{fmt(a.resolvedAt)}</td>
-                    <td className="px-4 py-3 text-slate-300">{a.locationCount}</td>
-                    <td className="px-4 py-3">
-                      <span className="text-emerald-400">{a.deliveriesSent}</span>
+                    <td className="px-4 py-3 font-mono text-xs text-mist">{fmt(a.triggeredAt)}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-mist">{fmt(a.acknowledgedAt)}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-mist">{fmt(a.resolvedAt)}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-mist">{a.locationCount}</td>
+                    <td className="px-4 py-3 font-mono text-xs">
+                      <span className="text-safe-soft">{a.deliveriesSent}</span>
                       {a.deliveriesFailed > 0 && (
-                        <span className="ml-1 text-red-400">{a.deliveriesFailed} failed</span>
+                        <span className="ml-1.5 text-signal-soft">{a.deliveriesFailed} failed</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
                       {a.deliveriesFailed > 0 ? (
                         <RetryButton alertId={a.id} />
                       ) : (
-                        <span className="text-xs text-slate-600">—</span>
+                        <span className="font-mono text-xs text-faint">—</span>
                       )}
                     </td>
                   </tr>
                 ))}
                 {alerts.data && alerts.data.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
+                    <td colSpan={8} className="bg-panel px-4 py-10 text-center font-mono text-xs text-faint">
                       No alerts match this filter.
                     </td>
                   </tr>
                 )}
                 {alerts.isLoading && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
+                    <td colSpan={8} className="bg-panel px-4 py-10 text-center font-mono text-xs text-faint">
                       Loading…
                     </td>
                   </tr>
@@ -149,11 +154,15 @@ export function AdminDashboard() {
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-      <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-1 text-xl font-semibold text-slate-100">{value}</div>
+    <div
+      className={`rounded-2xl border p-4 ${
+        accent ? 'border-signal/50 bg-signal/10' : 'border-line bg-panel'
+      }`}
+    >
+      <div className="font-mono text-[11px] uppercase tracking-wider text-faint">{label}</div>
+      <div className="mt-1.5 font-display text-2xl font-semibold tabular-nums text-chalk">{value}</div>
     </div>
   );
 }
@@ -164,7 +173,7 @@ function RetryButton({ alertId }: { alertId: string }) {
     <button
       onClick={() => retry.mutate()}
       disabled={retry.isPending}
-      className="rounded-lg border border-red-700 px-2.5 py-1 text-xs font-medium text-red-400 transition-colors hover:bg-red-950 disabled:opacity-60"
+      className="rounded-lg border border-signal/50 px-2.5 py-1.5 font-mono text-[11px] font-medium text-signal-soft transition-colors hover:bg-signal/10 disabled:opacity-60"
     >
       {retry.isPending ? '…' : retry.isSuccess ? `Requeued ${retry.data.requeued}` : 'Retry'}
     </button>

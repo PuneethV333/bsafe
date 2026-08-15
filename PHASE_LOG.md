@@ -381,3 +381,27 @@ User directive: "use websockets … as baseline for everything that realtime".
 - Phase 2: gateway must verify the Firebase ID token from `client.handshake.auth.token`; until then sockets are unauthenticated (dev only).
 - Phase 5: join sockets to per-alert rooms (`alert:<id>`) for scoped emits.
 - Phase 10: tighten gateway CORS origin whitelist + reverse-proxy ws in production.
+
+---
+
+## 2026-08-15 — SMS delivery diagnosis & fix (INSTRUCTIONS.md)
+
+**Root cause:** phone-format bug, not the pipeline. Contacts saved without a country code
+(e.g. `9538142453`) had `+` blindly prepended by `toE164()` in `twilio.provider.ts`,
+producing invalid E.164 `+9538142453` → Twilio rejected with *"The 'To' number +953814**** is not a valid phone number."*
+
+**Evidence (Render `bsafe-api` logs + production Neon DB):**
+- Worker correctly started as `(twilio / sendgrid)` after `NOTIFICATIONS_DRY_RUN=false` took effect (env is read once at boot — needed a real redeploy).
+- SMS to `+919110621698` → `sent` (Twilio accepted, `sid=SMda…`).
+- SMS to `9538142453` → `failed` (invalid To), all 3 attempts.
+- Email → `failed: Forbidden` — SendGrid account-side (separate issue: sender verification / API key scope), NOT part of this fix.
+
+**Fixes:**
+- Tightened `create-contact.dto.ts` + `update-contact.dto.ts` phone regex to `/^\+[1-9]\d{7,14}$/` (country code required).
+- Added matching client-side validation + error message in `ContactsPage.tsx`.
+- Updated the stored prod contact `0a0fa5e8…` phone `9538142453` → `+919538142453`.
+
+**Follow-ups:**
+- Re-trigger a test alert end-to-end; confirm SMS shows `sent` and is received on the test phone.
+- SendGrid `Forbidden` still needs account-side fix (verify `bsafe.dev@gmail.com` sender + API key Mail Send scope).
+- On a fresh DB the stricter regex is enforced at DTO level; existing bad data must be migrated (only 1 row, already fixed).

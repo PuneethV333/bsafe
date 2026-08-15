@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import type { UserDto } from '@bsafe/shared-types';
-import { UserIcon } from '../components/icons';
+import { ShieldIcon } from '../components/icons';
 import { useProfile, useUpdateProfile } from '../lib/users';
 
 function ProfileForm({ profile, disabled }: { profile: UserDto; disabled: boolean }) {
@@ -25,14 +25,14 @@ function ProfileForm({ profile, disabled }: { profile: UserDto; disabled: boolea
   return (
     <form
       onSubmit={onSubmit}
-      className="mt-6 max-w-md space-y-4 rounded-xl border border-slate-800 bg-slate-900 p-6"
+      className="mt-6 max-w-md space-y-5 rounded-2xl border border-line bg-panel p-6"
     >
       <div>
-        <label className="block text-xs uppercase tracking-wide text-slate-400">Firebase email</label>
-        <p className="mt-1 text-sm">{profile.email ?? '…'}</p>
+        <span className="field-label">Account email</span>
+        <p className="mt-1.5 font-mono text-sm text-mist">{profile.email ?? '…'}</p>
       </div>
       <div>
-        <label htmlFor="name" className="block text-xs uppercase tracking-wide text-slate-400">
+        <label htmlFor="name" className="field-label">
           Name
         </label>
         <input
@@ -41,24 +41,27 @@ function ProfileForm({ profile, disabled }: { profile: UserDto; disabled: boolea
           maxLength={120}
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm outline-none focus:border-red-500"
+          className="field-input"
         />
       </div>
       <div>
-        <label htmlFor="phone" className="block text-xs uppercase tracking-wide text-slate-400">
+        <label htmlFor="phone" className="field-label">
           Phone
         </label>
         <input
           id="phone"
-          placeholder="e.g. +14155550123"
+          placeholder="+14155550123"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm outline-none focus:border-red-500"
+          className="field-input"
         />
       </div>
 
       {message && (
-        <p className={updateProfile.isError ? 'text-sm text-red-400' : 'text-sm text-emerald-300'}>
+        <p
+          className={`text-sm ${updateProfile.isError ? 'text-signal-soft' : 'text-safe-soft'}`}
+          role="status"
+        >
           {message}
         </p>
       )}
@@ -66,7 +69,7 @@ function ProfileForm({ profile, disabled }: { profile: UserDto; disabled: boolea
       <button
         type="submit"
         disabled={disabled || updateProfile.isPending}
-        className="w-full min-h-11 rounded-lg bg-red-600 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-500 disabled:opacity-50"
+        className="min-h-11 w-full rounded-xl bg-signal py-2 text-sm font-semibold text-white transition-colors hover:bg-signal-bright disabled:opacity-50"
       >
         {updateProfile.isPending ? 'Saving…' : 'Save changes'}
       </button>
@@ -78,17 +81,39 @@ export function ProfilePage() {
   const profile = useProfile();
 
   return (
-    <div className="min-h-screen bg-slate-950 p-4 text-slate-100 sm:p-6">
-      <h1 className="flex items-center gap-2 text-2xl font-bold text-red-500">
-        <UserIcon className="h-6 w-6" />
-        Profile
-      </h1>
+    <div className="mx-auto max-w-xl animate-rise text-chalk">
+      <header>
+        <p className="eyebrow">Account</p>
+        <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight">Profile</h1>
+      </header>
+
       {profile.isPending ? (
-        <p className="mt-6 text-sm text-slate-400">Loading profile…</p>
+        <p className="mt-6 text-sm text-mist">Loading profile…</p>
       ) : profile.data ? (
-        <ProfileForm key={profile.data.id} profile={profile.data} disabled={profile.isFetching} />
+        <>
+          <div className="mt-6 flex items-center gap-4 rounded-2xl border border-line bg-panel p-5">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-line-bright bg-raised font-display text-xl font-semibold text-chalk">
+              {profile.data.name.slice(0, 1).toUpperCase()}
+            </span>
+            <div className="min-w-0">
+              <p className="flex flex-wrap items-center gap-2 font-display text-lg font-semibold">
+                {profile.data.name}
+                {profile.data.isAdmin && (
+                  <span className="inline-flex items-center gap-1 rounded-md border border-caution/40 bg-caution/10 px-1.5 py-0.5 font-mono text-[10px] font-medium tracking-wider text-caution">
+                    <ShieldIcon className="h-3 w-3" />
+                    ADMIN
+                  </span>
+                )}
+              </p>
+              <p className="mt-0.5 truncate font-mono text-xs text-faint">
+                {profile.data.email ?? '—'}
+              </p>
+            </div>
+          </div>
+          <ProfileForm key={profile.data.id} profile={profile.data} disabled={profile.isFetching} />
+        </>
       ) : (
-        <p className="mt-6 text-sm text-red-400">Could not load profile.</p>
+        <p className="mt-6 text-sm text-signal-soft">Could not load profile.</p>
       )}
     </div>
   );

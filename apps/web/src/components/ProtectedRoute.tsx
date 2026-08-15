@@ -5,7 +5,7 @@ export function ProtectedRoute() {
   const { user, initializing, syncing } = useAuth();
 
   if (initializing || syncing) {
-    return <div className="min-h-screen bg-slate-950" />;
+    return <div className="min-h-screen bg-night" />;
   }
   return user ? <Outlet /> : <Navigate to="/login" replace />;
 }
