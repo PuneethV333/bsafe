@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import type {
@@ -30,6 +31,8 @@ type AlertWithLocation = {
 
 @Injectable()
 export class AlertsService {
+  private readonly logger = new Logger(AlertsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -52,7 +55,9 @@ export class AlertsService {
         accuracy: dto.accuracy,
       });
     }
-    await this.notifications.enqueueForAlert(alert, userId);
+    void this.notifications.enqueueForAlert(alert, userId).catch((err) => {
+      this.logger.error(`notification enqueue for alert ${alert.id} failed`, err.stack);
+    });
     return this.getAlert(userId, alert.id);
   }
 

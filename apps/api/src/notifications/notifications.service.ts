@@ -44,42 +44,52 @@ export class NotificationsService {
     });
     const trackingUrl = `${this.trackingBase()}/track/${alert.trackingToken}`;
 
-    let enqueued = 0;
-    for (const contact of contacts) {
-      if (contact.phone) {
-        const delivery = await this.prisma.notificationDelivery.create({
-          data: { alertId: alert.id, contactId: contact.id, channel: 'sms' },
-        });
-        await this.enqueue({
-          alertId: alert.id,
-          contactId: contact.id,
-          deliveryId: delivery.id,
-          channel: 'sms',
-          trackingUrl,
-          userName: user.name,
-          triggeredAt: alert.triggeredAt.toISOString(),
-          contactPhone: contact.phone,
-        });
-        enqueued++;
+    const tasks = contacts.flatMap<Promise<void>>((contact) => {
+      const perContact: Promise<void>[] = [];
+      const { phone, email } = contact;
+      if (phone) {
+        perContact.push(
+          (async () => {
+            const delivery = await this.prisma.notificationDelivery.create({
+              data: { alertId: alert.id, contactId: contact.id, channel: 'sms' },
+            });
+            await this.enqueue({
+              alertId: alert.id,
+              contactId: contact.id,
+              deliveryId: delivery.id,
+              channel: 'sms',
+              trackingUrl,
+              userName: user.name,
+              triggeredAt: alert.triggeredAt.toISOString(),
+              contactPhone: phone,
+            });
+          })(),
+        );
       }
-      if (contact.email) {
-        const delivery = await this.prisma.notificationDelivery.create({
-          data: { alertId: alert.id, contactId: contact.id, channel: 'email' },
-        });
-        await this.enqueue({
-          alertId: alert.id,
-          contactId: contact.id,
-          deliveryId: delivery.id,
-          channel: 'email',
-          trackingUrl,
-          userName: user.name,
-          triggeredAt: alert.triggeredAt.toISOString(),
-          contactEmail: contact.email,
-        });
-        enqueued++;
+      if (email) {
+        perContact.push(
+          (async () => {
+            const delivery = await this.prisma.notificationDelivery.create({
+              data: { alertId: alert.id, contactId: contact.id, channel: 'email' },
+            });
+            await this.enqueue({
+              alertId: alert.id,
+              contactId: contact.id,
+              deliveryId: delivery.id,
+              channel: 'email',
+              trackingUrl,
+              userName: user.name,
+              triggeredAt: alert.triggeredAt.toISOString(),
+              contactEmail: email,
+            });
+          })(),
+        );
       }
-    }
-    return enqueued;
+      return perContact;
+    });
+
+    await Promise.all(tasks);
+    return tasks.length;
   }
 
   /** Re-queue every failed delivery for an alert (admin-gated) and enqueue fresh jobs. */

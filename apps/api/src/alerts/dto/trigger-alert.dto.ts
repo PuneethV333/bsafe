@@ -4,6 +4,7 @@ import {
   IsLongitude,
   IsNumber,
   IsOptional,
+  Max,
   Min,
 } from 'class-validator';
 import type { TriggerType } from '@bsafe/shared-types';
@@ -24,5 +25,6 @@ export class TriggerAlertDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(50000)
   accuracy?: number;
 }

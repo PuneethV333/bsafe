@@ -23,6 +23,7 @@ const TICKS = Array.from({ length: 60 }, (_, i) => i);
 export function SosButton({ onTrigger, disabled = false, active = false }: SosButtonProps) {
   const suppressTap = useRef(false);
   const holdTimer = useRef<number | null>(null);
+  const firing = useRef(false);
 
   const cancelHold = () => {
     if (holdTimer.current !== null) {
@@ -36,7 +37,7 @@ export function SosButton({ onTrigger, disabled = false, active = false }: SosBu
     suppressTap.current = false;
     holdTimer.current = window.setTimeout(() => {
       suppressTap.current = true;
-      onTrigger('longPress');
+      fire('longPress');
     }, HOLD_MS);
   };
 
@@ -50,7 +51,17 @@ export function SosButton({ onTrigger, disabled = false, active = false }: SosBu
       suppressTap.current = false;
       return;
     }
-    onTrigger('tap');
+    fire('tap');
+  };
+
+  const fire = (type: TriggerType) => {
+    // Latch: one trigger per press even if click/pointer/keyboard events overlap.
+    if (firing.current) return;
+    firing.current = true;
+    window.setTimeout(() => {
+      firing.current = false;
+    }, 350);
+    onTrigger(type);
   };
 
   return (
@@ -62,9 +73,6 @@ export function SosButton({ onTrigger, disabled = false, active = false }: SosBu
       onPointerLeave={cancelHold}
       onPointerCancel={cancelHold}
       onClick={handleClick}
-      onKeyDown={(e) => {
-        if ((e.key === 'Enter' || e.key === ' ') && !disabled && !active) onTrigger('tap');
-      }}
       disabled={disabled}
       className={[
         'group relative flex h-60 w-60 select-none items-center justify-center rounded-full outline-none sm:h-72 sm:w-72',

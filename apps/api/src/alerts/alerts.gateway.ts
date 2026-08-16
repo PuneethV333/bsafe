@@ -37,6 +37,9 @@ export class AlertsGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
   private readonly logger = new Logger(AlertsGateway.name);
+  // Known limitation: the per-user location throttle lives in an in-memory Map.
+  // Fine for the single-instance Render deploy today; must move to Redis keyed
+  // by userId before horizontal scaling (see Improvements.md task 4).
   private readonly lastLocationAt = new Map<string, number>();
 
   @WebSocketServer()

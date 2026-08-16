@@ -12,7 +12,9 @@
     "build": "npm run build -w @bsafe/api && npm run build -w @bsafe/web",
     "lint": "npm run lint -w @bsafe/api && npm run lint -w @bsafe/web",
     "typecheck": "npm run typecheck -w @bsafe/api && npm run typecheck -w @bsafe/web",
-    "format": "prettier --write \"apps/**/*.{ts,tsx,js,json,css,html}\" \"packages/**/*.ts\""
+    "format": "prettier --write \"apps/**/*.{ts,tsx,js,json,css,html}\" \"packages/**/*.ts\"",
+    "check:secrets": "bash scripts/check-env-secrets.sh --all",
+    "package:review": "bash scripts/package-for-review.sh"
   },
   "devDependencies": {
     "concurrently": "^10.0.4",
@@ -26,6 +28,7 @@
     "prisma": true,
     "@prisma/engines": true,
     "@firebase/util": true,
-    "protobufjs": true
+    "protobufjs": true,
+    "msgpackr-extract@3.0.4": true
   }
 }

@@ -1,4 +1,11 @@
-import { IsLatitude, IsLongitude, IsNumber, IsOptional, Min } from 'class-validator';
+import {
+  IsLatitude,
+  IsLongitude,
+  IsNumber,
+  IsOptional,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class UpdateLocationDto {
   @IsLatitude()
@@ -10,5 +17,6 @@ export class UpdateLocationDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(50000)
   accuracy?: number;
 }
