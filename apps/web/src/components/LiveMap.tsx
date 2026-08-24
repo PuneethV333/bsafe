@@ -6,6 +6,8 @@ interface LiveMapProps {
   latitude: number;
   longitude: number;
   label?: string;
+  /** GPS accuracy in meters — drawn as a translucent halo around the pin. */
+  accuracy?: number | null;
 }
 
 const pinIcon = L.divIcon({
@@ -15,10 +17,23 @@ const pinIcon = L.divIcon({
   iconAnchor: [9, 9],
 });
 
-export function LiveMap({ latitude, longitude, label }: LiveMapProps) {
+const accuracyStyle: Omit<L.CircleMarkerOptions, 'radius'> = {
+  color: '#e12d4a',
+  weight: 1,
+  opacity: 0.5,
+  fillColor: '#e12d4a',
+  fillOpacity: 0.12,
+};
+
+export function LiveMap({ latitude, longitude, label, accuracy }: LiveMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const circleRef = useRef<L.Circle | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const followRef = useRef(true);
+  const centeredOnRef = useRef<{ lat: number; lng: number } | null>(null);
+  const popupOpenedRef = useRef(false);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -33,25 +48,75 @@ export function LiveMap({ latitude, longitude, label }: LiveMapProps) {
         subdomains: 'abcd',
         maxZoom: 19,
       }).addTo(map);
+
+      resizeObserverRef.current = new ResizeObserver(() => map.invalidateSize());
+      resizeObserverRef.current.observe(container);
+
+      // Once the viewer pans or zooms themselves, stop auto-following the pin
+      // so fresh fixes never yank the viewport back while they explore.
+      map.on('dragstart zoomstart', () => {
+        followRef.current = false;
+      });
+
       mapRef.current = map;
     }
-
     const map = mapRef.current;
+
     if (!markerRef.current) {
       markerRef.current = L.marker([latitude, longitude], { icon: pinIcon }).addTo(map);
     } else {
       markerRef.current.setLatLng([latitude, longitude]);
     }
-    const zoom = Math.max(map.getZoom() || 15, 15);
-    map.setView([latitude, longitude], zoom);
-    if (label) markerRef.current.bindPopup(label).openPopup();
-  }, [latitude, longitude, label]);
+
+    if (accuracy && accuracy > 0) {
+      if (!circleRef.current) {
+        circleRef.current = L.circle([latitude, longitude], {
+          ...accuracyStyle,
+          radius: accuracy,
+        }).addTo(map);
+      } else {
+        circleRef.current.setLatLng([latitude, longitude]);
+        circleRef.current.setRadius(accuracy);
+      }
+    } else if (circleRef.current) {
+      circleRef.current.remove();
+      circleRef.current = null;
+    }
+
+    const marker = markerRef.current as L.Marker;
+    if (label) {
+      if (marker.getPopup()) {
+        marker.setPopupContent(label);
+      } else {
+        marker.bindPopup(label);
+      }
+      if (!popupOpenedRef.current) {
+        marker.openPopup();
+        popupOpenedRef.current = true;
+      }
+    } else if (marker.getPopup()) {
+      marker.unbindPopup();
+      popupOpenedRef.current = false;
+    }
+
+    const moved =
+      !centeredOnRef.current ||
+      Math.abs(centeredOnRef.current.lat - latitude) > 1e-6 ||
+      Math.abs(centeredOnRef.current.lng - longitude) > 1e-6;
+    if (moved && followRef.current) {
+      map.panTo([latitude, longitude], { animate: true });
+      centeredOnRef.current = { lat: latitude, lng: longitude };
+    }
+  }, [latitude, longitude, label, accuracy]);
 
   useEffect(
     () => () => {
+      resizeObserverRef.current?.disconnect();
+      resizeObserverRef.current = null;
       mapRef.current?.remove();
       mapRef.current = null;
       markerRef.current = null;
+      circleRef.current = null;
     },
     [],
   );

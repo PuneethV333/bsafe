@@ -40,6 +40,10 @@ export function TrackAlertPage() {
 
   const resolved = data.status === 'resolved';
   const lastLocation = data.lastLocation;
+  const accuracyMeters =
+    lastLocation?.accuracy && lastLocation.accuracy > 0
+      ? Math.round(lastLocation.accuracy)
+      : null;
 
   const handleAcknowledge = () => {
     acknowledge.mutate(undefined, { onSuccess: () => tracking.refetch() });
@@ -69,7 +73,8 @@ export function TrackAlertPage() {
             <LiveMap
               latitude={lastLocation.latitude}
               longitude={lastLocation.longitude}
-              label={`Last seen ${formatTime(lastLocation.recordedAt)}`}
+              accuracy={lastLocation.accuracy}
+              label={`Last seen ${formatTime(lastLocation.recordedAt)}${accuracyMeters ? ` · ±${accuracyMeters}m` : ''}`}
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center bg-panel text-center text-mist">
@@ -79,6 +84,22 @@ export function TrackAlertPage() {
             </div>
           )}
         </div>
+
+        {lastLocation && (
+          <a
+            href={`https://www.google.com/maps?q=${lastLocation.latitude},${lastLocation.longitude}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-line-bright bg-panel px-4 py-3 font-mono text-xs tracking-widest text-chalk transition-colors hover:border-safe/60 hover:text-safe-soft"
+          >
+            OPEN IN GOOGLE MAPS ↗
+          </a>
+        )}
+        {accuracyMeters !== null && (
+          <p className="mt-2 text-center font-mono text-[11px] tracking-wider text-faint">
+            GPS ACCURACY ±{accuracyMeters}M
+          </p>
+        )}
 
         <dl className="mt-4 grid grid-cols-2 gap-3">
           <div className="rounded-2xl border border-line bg-panel p-3.5">
