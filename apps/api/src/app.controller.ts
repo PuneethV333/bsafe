@@ -10,4 +10,11 @@ export class AppController {
   hello(): { service: string; message: string } {
     return { service: 'bsafe-api', message: 'Hello from the bSafe API' };
   }
+
+  @Get('health')
+  health() {
+    return {
+      status: 'ok',
+    };
+  }
 }
