@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { getAuthErrorMessage } from '../lib/auth-errors';
 import { useAuth } from '../lib/useAuth';
 import { SosMark } from '../components/icons';
+import { FullPageLoader } from '../components/FullPageLoader';
 
 export function LoginPage() {
   const { user, initializing, configured, signIn, signUp, signInWithGoogle } = useAuth();
@@ -13,7 +14,7 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   if (initializing) {
-    return <div className="min-h-screen bg-night" />;
+    return <FullPageLoader label="RESTORING SESSION…" />;
   }
   if (user) return <Navigate to="/" replace />;
 
