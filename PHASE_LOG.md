@@ -405,3 +405,29 @@ producing invalid E.164 `+9538142453` → Twilio rejected with *"The 'To' number
 - Re-trigger a test alert end-to-end; confirm SMS shows `sent` and is received on the test phone.
 - SendGrid `Forbidden` still needs account-side fix (verify `bsafe.dev@gmail.com` sender + API key Mail Send scope).
 - On a fresh DB the stricter regex is enforced at DTO level; existing bad data must be migrated (only 1 row, already fixed).
+
+---
+
+## 2026-08-16 — Twilio provider: direct-from trial number (no Messaging Service)
+
+**Change:** SMS now sends with `from: TWILIO_PHONE_NUMBER` instead of `messagingServiceSid`.
+A free Twilio trial ships a trial number out of the box, so requiring a Messaging
+Service added setup friction for no benefit. `TWILIO_MESSAGING_SERVICE_SID` is
+replaced by `TWILIO_PHONE_NUMBER` (normalized through `toE164`, so `+1 (447) 213-5457`
+is accepted).
+
+**Files:** `apps/api/src/notifications/providers/twilio.provider.ts`,
+`apps/api/.env.example`, `docs/deployment.md`, local `apps/api/.env` (gitignored).
+
+**Preserved:** the `SmsProvider` interface (`name` + `sendSms`) and
+`NOTIFICATIONS_DRY_RUN` behaviour are unchanged.
+
+**Verified:** lint + typecheck + build pass. Dry-run provider still short-circuits;
+missing-credential error names `TWILIO_PHONE_NUMBER`; real provider builds from the
+new variable alone.
+
+**Blocked (account-side, not code):** the Twilio account now returns
+`401 — account <AC…> with status 4 is not active`, so no live SMS can be sent
+until the trial is reactivated/upgraded. Re-test the send path after that. Trial
+accounts also require every recipient to be a Verified Caller ID (error 21608
+otherwise).

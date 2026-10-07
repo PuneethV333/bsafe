@@ -15,25 +15,28 @@ const toE164 = (phone: string): string => {
 const realSmsProvider = (config: ConfigService): SmsProvider => {
   const accountSid = config.get<string>('TWILIO_ACCOUNT_SID');
   const authToken = config.get<string>('TWILIO_AUTH_TOKEN');
-  const messagingServiceSid = config.get<string>('TWILIO_MESSAGING_SERVICE_SID');
-  if (!accountSid || !authToken || !messagingServiceSid) {
+  const phoneNumber = config.get<string>('TWILIO_PHONE_NUMBER');
+  if (!accountSid || !authToken || !phoneNumber) {
     throw new Error(
-      'TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_MESSAGING_SERVICE_SID ' +
-        'are required to send SMS (or set NOTIFICATIONS_DRY_RUN=true).',
+      'TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_PHONE_NUMBER ' +
+        'are required to send SMS (or set NOTIFICATIONS_DRY_RUN=true). ' +
+        'TWILIO_PHONE_NUMBER must be a Twilio trial number in E.164 format ' +
+        '(e.g. +14155238885) — a Messaging Service is not required.',
     );
   }
   const client: Twilio = twilio(accountSid, authToken);
   const logger = new Logger('TwilioProvider');
+  const from = toE164(phoneNumber);
 
   return {
     name: 'twilio',
     async sendSms(to, body) {
       const message = await client.messages.create({
-        messagingServiceSid,
         to: toE164(to),
+        from,
         body,
       });
-      logger.log(`SMS queued: sid=${message.sid} to=${to}`);
+      logger.log(`SMS queued: sid=${message.sid} to=${to} from=${from}`);
     },
   };
 };
