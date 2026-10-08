@@ -7,7 +7,7 @@ import {
   useUpdateContact,
   type ContactInput,
 } from '../lib/contacts';
-import { MailIcon, PencilIcon, PhoneIcon, PlusIcon, TrashIcon, UsersIcon } from '../components/icons';
+import { PencilIcon, PhoneIcon, PlusIcon, TrashIcon, UsersIcon } from '../components/icons';
 
 const MAX_CONTACTS = 5;
 
@@ -41,22 +41,20 @@ function ContactForm({ initial, onSubmit, submitLabel, mutating }: {
 }) {
   const [name, setName] = useState(initial?.name ?? '');
   const [phone, setPhone] = useState(initial?.phone ?? '');
-  const [email, setEmail] = useState(initial?.email ?? '');
   const [relationship, setRelationship] = useState(initial?.relationship ?? '');
   const [phoneError, setPhoneError] = useState<string | null>(null);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const trimmedPhone = phone.trim();
-    if (trimmedPhone && !PHONE_RE.test(trimmedPhone)) {
+    if (!PHONE_RE.test(trimmedPhone)) {
       setPhoneError('Phone must include country code, e.g. +919876543210');
       return;
     }
     setPhoneError(null);
     onSubmit({
       name,
-      phone: trimmedPhone || undefined,
-      email: email.trim() || undefined,
+      phone: trimmedPhone,
       relationship: relationship.trim() || undefined,
     });
   };
@@ -65,13 +63,11 @@ function ContactForm({ initial, onSubmit, submitLabel, mutating }: {
     <form onSubmit={submit} className="space-y-4">
       <LabeledInput id="contact-name" label="Name" required maxLength={120} value={name}
         onChange={(e) => setName(e.target.value)} />
-      <LabeledInput id="contact-phone" label="Phone" placeholder="+14155550123" value={phone}
+      <LabeledInput id="contact-phone" label="Phone" required placeholder="+14155550123" value={phone}
         onChange={(e) => { setPhone(e.target.value); setPhoneError(null); }} />
       {phoneError && (
         <p role="alert" className="text-xs text-signal-soft">{phoneError}</p>
       )}
-      <LabeledInput id="contact-email" label="Email" type="email" value={email}
-        onChange={(e) => setEmail(e.target.value)} />
       <LabeledInput id="contact-relationship" label="Relationship (optional)" maxLength={80} value={relationship}
         onChange={(e) => setRelationship(e.target.value)} />
       <button
@@ -178,12 +174,6 @@ export function ContactsPage() {
                           <span className="inline-flex items-center gap-1">
                             <PhoneIcon className="h-3 w-3 text-faint" />
                             {c.phone}
-                          </span>
-                        )}
-                        {c.email && (
-                          <span className="inline-flex items-center gap-1 truncate">
-                            <MailIcon className="h-3 w-3 shrink-0 text-faint" />
-                            {c.email}
                           </span>
                         )}
                         {c.relationship && (

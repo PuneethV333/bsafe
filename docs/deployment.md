@@ -33,7 +33,6 @@ See `apps/api/.env.example` and `apps/web/.env.example` for the full list. Every
 - `ADMIN_EMAILS` — comma-separated emails granted admin
 - `NOTIFICATIONS_DRY_RUN=true` — log notifications instead of sending (set `false` once Twilio/SendGrid creds are added)
 - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` — SMS sender. `TWILIO_PHONE_NUMBER` is a Twilio number in E.164 format (e.g. `+14155238885`); no Messaging Service is required. On a trial account every recipient must also be a Verified Caller ID, otherwise Twilio rejects the send (error 21608).
-- `SENDGRID_*` — email sender (only when enabling real email)
 
 ### Web (Vercel project → Environment)
 

@@ -133,7 +133,7 @@ Then open http://localhost:5173. The Vite dev server proxies `/api` and `/socket
 | `CORS_ORIGINS` | – | comma-separated allowed origins (`http://localhost:5173` locally) |
 | `FIREBASE_PROJECT_ID` / `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` | – | Firebase Admin SDK for ID-token verification |
 | `ADMIN_EMAILS` | – | comma-separated emails granted `isAdmin` |
-| `TWILIO_*`, `SENDGRID_*`, `WEB_BASE_URL`, `NOTIFICATIONS_DRY_RUN` | – | notification providers; dry-run logs instead of sending |
+| `TWILIO_*`, `WEB_BASE_URL`, `NOTIFICATIONS_DRY_RUN` | – | SMS notifications; dry-run logs instead of sending |
 
 **Web** (`apps/web/.env`):
 
