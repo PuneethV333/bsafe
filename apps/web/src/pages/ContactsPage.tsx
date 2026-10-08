@@ -19,9 +19,10 @@ function errMessage(e: unknown): string {
 
 const PHONE_RE = /^\+[1-9]\d{7,14}$/;
 
-function LabeledInput({ id, label, ...rest }: {
+function LabeledInput({ id, label, hint, ...rest }: {
   id: string;
   label: string;
+  hint?: string;
 } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div>
@@ -29,6 +30,7 @@ function LabeledInput({ id, label, ...rest }: {
         {label}
       </label>
       <input id={id} className="field-input" {...rest} />
+      {hint && <p className="mt-1.5 text-xs leading-relaxed text-faint">{hint}</p>}
     </div>
   );
 }
@@ -71,6 +73,7 @@ function ContactForm({ initial, onSubmit, submitLabel, mutating }: {
         <p role="alert" className="text-xs text-signal-soft">{phoneError}</p>
       )}
       <LabeledInput id="contact-email" label="Email (optional)" type="email" value={email}
+        hint="Enter a correct email ID — your contact may still receive the alert by email if SMS is unavailable for their number."
         onChange={(e) => setEmail(e.target.value)} />
       <LabeledInput id="contact-relationship" label="Relationship (optional)" maxLength={80} value={relationship}
         onChange={(e) => setRelationship(e.target.value)} />
