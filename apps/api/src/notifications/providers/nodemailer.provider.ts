@@ -1,3 +1,4 @@
+import { promises as dns } from 'node:dns';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import nodemailer, { type Transporter } from 'nodemailer';
@@ -13,17 +14,18 @@ import {
  * vendor-specific API, and stays dry-run by default like the SMS provider.
  *
  * Required when NOTIFICATIONS_DRY_RUN=false: SMTP_HOST, SMTP_PORT,
- * SMTP_USER, SMTP_PASS, SMTP_FROM_EMAIL. SMTP_FROM_NAME and
- * SMTP_SECURE are optional.
+ * SMTP_USER, SMTP_PASS, SMTP_FROM_EMAIL. SMTP_FROM_NAME, SMTP_SECURE and
+ * SMTP_FAMILY are optional.
  */
 const realEmailProvider = (config: ConfigService): EmailProvider => {
-  const host = config.get<string>('SMTP_HOST');
+  const host = config.get<string>('SMTP_HOST') as string;
   const port = Number(config.get<string>('SMTP_PORT') ?? '587');
-  const user = config.get<string>('SMTP_USER');
-  const pass = config.get<string>('SMTP_PASS');
-  const fromEmail = config.get<string>('SMTP_FROM_EMAIL');
+  const user = config.get<string>('SMTP_USER') as string;
+  const pass = config.get<string>('SMTP_PASS') as string;
+  const fromEmail = config.get<string>('SMTP_FROM_EMAIL') as string;
   const fromName = config.get<string>('SMTP_FROM_NAME', 'bsafe');
   const secure = config.get<string>('SMTP_SECURE', 'false') === 'true';
+  const family = Number(config.get<string>('SMTP_FAMILY', '4'));
 
   if (!host || !user || !pass || !fromEmail) {
     throw new Error(
@@ -32,25 +34,43 @@ const realEmailProvider = (config: ConfigService): EmailProvider => {
     );
   }
 
-  // `family` is forwarded to net.connect by Nodemailer but is absent from its
-  // typings, hence the cast.
-  const transporter: Transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: { user, pass },
-    // Render (and most container hosts) have no IPv6 egress, so an AAAA lookup
-    // for smtp.gmail.com resolves and the connection dies with ENETUNREACH.
-    // Pin the family to IPv4 unless the host explicitly asks for 6.
-    family: Number(config.get<string>('SMTP_FAMILY', '4')),
-  } as Parameters<typeof nodemailer.createTransport>[0]);
   const logger = new Logger('EmailProvider');
   const from = `${fromName} <${fromEmail}>`;
+
+  /**
+   * Nodemailer resolves the hostname itself (IPv4 *and* IPv6, then falls back
+   * to an AAAA address), so its `family` option is ignored and hosts without
+   * IPv6 egress — Render included — die with ENETUNREACH. Resolve an IPv4
+   * address ourselves and connect to that, while passing `servername` so TLS
+   * still sends SNI and validates the certificate against the real hostname.
+   */
+  let transporter: Promise<Transporter> | null = null;
+  const getTransporter = (): Promise<Transporter> => {
+    transporter ??= (async () => {
+      let connectHost = host;
+      if (family === 4) {
+        try {
+          const [address] = await dns.resolve4(host);
+          if (address) connectHost = address;
+        } catch {
+          // No A record — let Nodemailer resolve it as before.
+        }
+      }
+      return nodemailer.createTransport({
+        host: connectHost,
+        servername: host,
+        port,
+        secure,
+        auth: { user, pass },
+      } as Parameters<typeof nodemailer.createTransport>[0]);
+    })();
+    return transporter;
+  };
 
   return {
     name: 'nodemailer',
     async sendEmail(to, subject, html) {
-      const info = await transporter.sendMail({ from, to, subject, html });
+      const info = await (await getTransporter()).sendMail({ from, to, subject, html });
       logger.log(`email queued: id=${info.messageId} to=${to}`);
     },
   };
@@ -60,9 +80,8 @@ const dryRunEmailProvider = (): EmailProvider => {
   const logger = new Logger('EmailProvider(dry-run)');
   return {
     name: 'nodemailer-dry-run',
-    async sendEmail(to, subject, html) {
+    async sendEmail(to, subject) {
       logger.log(`[dry-run] would email ${to} (subject: ${subject})`);
-      void html;
     },
   };
 };
