@@ -11,6 +11,7 @@ import type {
   AlertLocationDto,
 } from '@bsafe/shared-types';
 import { PrismaService } from '../prisma/prisma.service';
+import { withReadRetry } from '../prisma/retry';
 import { NotificationsService } from '../notifications/notifications.service';
 import { TriggerAlertDto, UpdateLocationDto } from './dto';
 
@@ -115,10 +116,14 @@ export class AlertsService {
   /** Single alert with its last known location. Ownership-scoped. */
   async getAlert(userId: string, id: string): Promise<AlertDto> {
     await this.findOwned(userId, id);
-    const alert = await this.prisma.alert.findUniqueOrThrow({
-      where: { id },
-      include: { lastLocation: true, _count: { select: { locations: true } } },
-    });
+    // Read-only, so a dropped pooled connection can be replayed safely — this
+    // is the last step of an SOS trigger and must not 500 on a blip.
+    const alert = await withReadRetry(() =>
+      this.prisma.alert.findUniqueOrThrow({
+        where: { id },
+        include: { lastLocation: true, _count: { select: { locations: true } } },
+      }),
+    );
     return toAlertDto(alert);
   }
 
@@ -134,7 +139,9 @@ export class AlertsService {
 
   /** Ownership-scoped lookup used by the gateway; throws when not owned/missing. */
   async findOwned(userId: string, alertId: string) {
-    const alert = await this.prisma.alert.findUnique({ where: { id: alertId } });
+    const alert = await withReadRetry(() =>
+      this.prisma.alert.findUnique({ where: { id: alertId } }),
+    );
     if (!alert || alert.userId !== userId) {
       throw new NotFoundException('Alert not found.');
     }

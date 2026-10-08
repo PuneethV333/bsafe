@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import type { UserDto } from '@bsafe/shared-types';
 import { CacheService } from '../cache/cache.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { withReadRetry } from '../prisma/retry';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 const PROFILE_CACHE_TTL_SECONDS = 60;
@@ -45,7 +46,7 @@ export class UsersService {
    * Firebase uid from the ID token, so every write path must go through here.
    */
   async resolveLocalUserId(firebaseUid: string): Promise<string> {
-    const user = await this.getProfile(firebaseUid);
+    const user = await withReadRetry(() => this.getProfile(firebaseUid));
     return user.id;
   }
 }
