@@ -7,7 +7,7 @@ import {
   useUpdateContact,
   type ContactInput,
 } from '../lib/contacts';
-import { PencilIcon, PhoneIcon, PlusIcon, TrashIcon, UsersIcon } from '../components/icons';
+import { MailIcon, PencilIcon, PhoneIcon, PlusIcon, TrashIcon, UsersIcon } from '../components/icons';
 
 const MAX_CONTACTS = 5;
 
@@ -41,6 +41,7 @@ function ContactForm({ initial, onSubmit, submitLabel, mutating }: {
 }) {
   const [name, setName] = useState(initial?.name ?? '');
   const [phone, setPhone] = useState(initial?.phone ?? '');
+  const [email, setEmail] = useState(initial?.email ?? '');
   const [relationship, setRelationship] = useState(initial?.relationship ?? '');
   const [phoneError, setPhoneError] = useState<string | null>(null);
 
@@ -55,6 +56,7 @@ function ContactForm({ initial, onSubmit, submitLabel, mutating }: {
     onSubmit({
       name,
       phone: trimmedPhone,
+      email: email.trim() || undefined,
       relationship: relationship.trim() || undefined,
     });
   };
@@ -68,6 +70,8 @@ function ContactForm({ initial, onSubmit, submitLabel, mutating }: {
       {phoneError && (
         <p role="alert" className="text-xs text-signal-soft">{phoneError}</p>
       )}
+      <LabeledInput id="contact-email" label="Email (optional)" type="email" value={email}
+        onChange={(e) => setEmail(e.target.value)} />
       <LabeledInput id="contact-relationship" label="Relationship (optional)" maxLength={80} value={relationship}
         onChange={(e) => setRelationship(e.target.value)} />
       <button
@@ -174,6 +178,12 @@ export function ContactsPage() {
                           <span className="inline-flex items-center gap-1">
                             <PhoneIcon className="h-3 w-3 text-faint" />
                             {c.phone}
+                          </span>
+                        )}
+                        {c.email && (
+                          <span className="inline-flex items-center gap-1 truncate">
+                            <MailIcon className="h-3 w-3 shrink-0 text-faint" />
+                            {c.email}
                           </span>
                         )}
                         {c.relationship && (

@@ -6,10 +6,7 @@ import { redisConnection } from '../redis/redis-config';
 /** DI token for the BullMQ `notifications` queue (consumed from Phase 6). */
 export const NOTIFICATION_QUEUE = 'NOTIFICATION_QUEUE';
 
-/**
- * Channel recorded on a delivery row. The Prisma enum still carries `email`
- * for historical rows, but only SMS is dispatched today.
- */
+/** Channel recorded on a delivery row. */
 export type NotificationChannel = 'sms' | 'email';
 
 export interface NotificationJob {
@@ -21,6 +18,7 @@ export interface NotificationJob {
   userName: string;
   triggeredAt: string;
   contactPhone?: string;
+  contactEmail?: string;
 }
 
 export const notificationQueueProvider: FactoryProvider<Queue<NotificationJob>> = {

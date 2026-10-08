@@ -7,6 +7,7 @@ export const contactsQueryKey = ['contacts'];
 export interface ContactInput {
   name: string;
   phone: string;
+  email?: string;
   relationship?: string;
 }
 

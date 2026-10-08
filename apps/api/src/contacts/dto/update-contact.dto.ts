@@ -1,4 +1,4 @@
-import { IsOptional, IsString, Length, Matches } from 'class-validator';
+import { IsEmail, IsOptional, IsString, Length, Matches } from 'class-validator';
 
 export class UpdateContactDto {
   @IsOptional()
@@ -10,6 +10,10 @@ export class UpdateContactDto {
   @IsString()
   @Matches(/^\+[1-9]\d{7,14}$/, { message: 'phone must include country code, e.g. +919876543210' })
   phone?: string | null;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string | null;
 
   @IsOptional()
   @IsString()

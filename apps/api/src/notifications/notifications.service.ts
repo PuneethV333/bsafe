@@ -46,7 +46,7 @@ export class NotificationsService {
 
     const tasks = contacts.flatMap<Promise<void>>((contact) => {
       const perContact: Promise<void>[] = [];
-      const { phone } = contact;
+      const { phone, email } = contact;
       if (phone) {
         perContact.push(
           (async () => {
@@ -62,6 +62,25 @@ export class NotificationsService {
               userName: user.name,
               triggeredAt: alert.triggeredAt.toISOString(),
               contactPhone: phone,
+            });
+          })(),
+        );
+      }
+      if (email) {
+        perContact.push(
+          (async () => {
+            const delivery = await this.prisma.notificationDelivery.create({
+              data: { alertId: alert.id, contactId: contact.id, channel: 'email' },
+            });
+            await this.enqueue({
+              alertId: alert.id,
+              contactId: contact.id,
+              deliveryId: delivery.id,
+              channel: 'email',
+              trackingUrl,
+              userName: user.name,
+              triggeredAt: alert.triggeredAt.toISOString(),
+              contactEmail: email,
             });
           })(),
         );
@@ -101,6 +120,7 @@ export class NotificationsService {
         userName: alert.user.name,
         triggeredAt: alert.triggeredAt.toISOString(),
         contactPhone: delivery.contact.phone ?? undefined,
+        contactEmail: delivery.contact.email ?? undefined,
       });
       enqueued++;
     }

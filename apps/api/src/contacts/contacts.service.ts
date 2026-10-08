@@ -34,14 +34,14 @@ export class ContactsService {
     return dto;
   }
 
-  /** Add a contact. Enforces the 5-contact cap and dedupe by phone. */
+  /** Add a contact. Enforces the 5-contact cap and dedupe by phone/email. */
   async create(userId: string, dto: CreateContactDto): Promise<EmergencyContactDto> {
     const count = await this.prisma.emergencyContact.count({ where: { userId } });
     if (count >= MAX_CONTACTS) {
       throw new BadRequestException(`Maximum of ${MAX_CONTACTS} contacts allowed.`);
     }
 
-    await this.assertNoDuplicate(userId, dto.phone);
+    await this.assertNoDuplicate(userId, dto.phone, dto.email ?? null);
 
     try {
       const created = await this.prisma.emergencyContact.create({
@@ -49,6 +49,7 @@ export class ContactsService {
           userId,
           name: dto.name,
           phone: dto.phone,
+          email: dto.email ?? null,
           relationship: dto.relationship ?? null,
         },
       });
@@ -56,7 +57,7 @@ export class ContactsService {
       return toContactDto(created);
     } catch (e) {
       if ((e as { code?: string }).code === 'P2002') {
-        throw new ConflictException('A contact with this phone already exists.');
+        throw new ConflictException('A contact with this phone or email already exists.');
       }
       throw e;
     }
@@ -65,13 +66,14 @@ export class ContactsService {
   /** Edit a contact owned by this user. */
   async update(userId: string, id: string, dto: UpdateContactDto): Promise<EmergencyContactDto> {
     const contact = await this.findOwned(userId, id);
-    await this.assertNoDuplicate(userId, dto.phone ?? null, id);
+    await this.assertNoDuplicate(userId, dto.phone ?? null, dto.email ?? null, id);
 
     const updated = await this.prisma.emergencyContact.update({
       where: { id: contact.id },
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.phone !== undefined && { phone: dto.phone }),
+        ...(dto.email !== undefined && { email: dto.email ?? null }),
         ...(dto.relationship !== undefined && { relationship: dto.relationship ?? null }),
       },
     });
@@ -94,18 +96,22 @@ export class ContactsService {
     return contact;
   }
 
-  /** Pre-flight duplicate check (unique constraint is the backstop). */
+  /** Pre-flight duplicate check (unique constraints are the backstop). */
   private async assertNoDuplicate(
     userId: string,
     phone: string | null,
+    email: string | null,
     excludeId?: string,
   ) {
-    if (!phone) return;
+    const or: Array<{ phone: string } | { email: string }> = [];
+    if (phone) or.push({ phone });
+    if (email) or.push({ email });
+    if (or.length === 0) return;
 
     const existing = await this.prisma.emergencyContact.findFirst({
-      where: { userId, phone, ...(excludeId ? { NOT: { id: excludeId } } : {}) },
+      where: { userId, OR: or, ...(excludeId ? { NOT: { id: excludeId } } : {}) },
     });
-    if (existing) throw new ConflictException('A contact with this phone already exists.');
+    if (existing) throw new ConflictException('A contact with this phone or email already exists.');
   }
 
   private cacheKey(userId: string): string {
