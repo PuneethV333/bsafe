@@ -7,7 +7,7 @@ import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { NotificationsWorker } from './notifications.processor';
 import { smsProviderFactory } from './providers/twilio.provider';
-import { emailProviderFactory } from './providers/email.provider ';
+import { emailProviderFactory } from './providers/email.provider';
 
 /**
  * Notification dispatch (Phase 6): BullMQ queue + worker dispatch jobs to
