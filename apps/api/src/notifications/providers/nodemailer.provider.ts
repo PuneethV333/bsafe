@@ -32,12 +32,18 @@ const realEmailProvider = (config: ConfigService): EmailProvider => {
     );
   }
 
+  // `family` is forwarded to net.connect by Nodemailer but is absent from its
+  // typings, hence the cast.
   const transporter: Transporter = nodemailer.createTransport({
     host,
     port,
     secure,
     auth: { user, pass },
-  });
+    // Render (and most container hosts) have no IPv6 egress, so an AAAA lookup
+    // for smtp.gmail.com resolves and the connection dies with ENETUNREACH.
+    // Pin the family to IPv4 unless the host explicitly asks for 6.
+    family: Number(config.get<string>('SMTP_FAMILY', '4')),
+  } as Parameters<typeof nodemailer.createTransport>[0]);
   const logger = new Logger('EmailProvider');
   const from = `${fromName} <${fromEmail}>`;
 
