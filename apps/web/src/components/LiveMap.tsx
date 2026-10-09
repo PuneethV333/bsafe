@@ -26,19 +26,14 @@ const accuracyStyle: Omit<L.CircleMarkerOptions, 'radius'> = {
 };
 
 /**
- * Esri's Dark Gray Canvas basemap — no API key, dark enough for the night
- * palette. CARTO was serving an "API KEY REQUIRED" watermark tile instead of
- * map data. Esri orders tiles {z}/{y}/{x}; Leaflet's `{-y}` inverts the row
- * so the standard {x}/{y} placeholders work. Reference is the label overlay.
+ * Standard OpenStreetMap raster tiles — no API key, labels included. The
+ * OSMF tile usage policy allows light use like this provided attribution is
+ * shown and the tiles aren't bulk-downloaded; set maxZoom at 19 (their limit)
+ * so we never request tiles that do not exist.
  */
-const BASE_TILES =
-  'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{-y}/{x}';
-const LABEL_TILES =
-  'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{-y}/{x}';
-const ESRI_ATTRIBUTION =
-  'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, DeLorme, NAVTEQ';
-// Esri's canvas basemap is published to z16; beyond that we overzoom.
-const MAX_NATIVE_ZOOM = 16;
+const BASE_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const OSM_ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 export function LiveMap({ latitude, longitude, label, accuracy }: LiveMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -57,18 +52,9 @@ export function LiveMap({ latitude, longitude, label, accuracy }: LiveMapProps) 
     if (!mapRef.current) {
       const map = L.map(container, { attributionControl: true });
       map.setView([latitude, longitude], 15);
-      // Dark basemap keeps the night palette.
       L.tileLayer(BASE_TILES, {
-        attribution: ESRI_ATTRIBUTION,
-        maxZoom: 18,
-        maxNativeZoom: MAX_NATIVE_ZOOM,
-      }).addTo(map);
-      // Street labels on their own layer so the pin still reads on top.
-      L.tileLayer(LABEL_TILES, {
-        maxZoom: 18,
-        maxNativeZoom: MAX_NATIVE_ZOOM,
-        pane: 'tilePane',
-        opacity: 0.85,
+        attribution: OSM_ATTRIBUTION,
+        maxZoom: 19,
       }).addTo(map);
 
       resizeObserverRef.current = new ResizeObserver(() => map.invalidateSize());
